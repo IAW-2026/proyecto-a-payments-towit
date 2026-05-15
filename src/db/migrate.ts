@@ -7,11 +7,11 @@ import { config } from 'dotenv';
 config({ path: '.env.local' });
 
 const runMigrate = async () => {
-  if (!process.env.DATABASE_URL) {
-    throw new Error('DATABASE_URL not defined');
+  if (!process.env.NEON_DB_DATABASE_URL) {
+    throw new Error('NEON_DB_DATABASE_URL not defined');
   }
 
-  const sql = neon(process.env.DATABASE_URL);
+  const sql = neon(process.env.NEON_DB_DATABASE_URL);
   const db = drizzle(sql);
 
   console.log('Executing migrations');
