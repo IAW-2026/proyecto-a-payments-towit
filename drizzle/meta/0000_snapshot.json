@@ -1,5 +1,5 @@
 {
-  "id": "ae811dba-fd54-4de5-9afe-5da9c281aa30",
+  "id": "e1291111-2738-482b-97e2-b7c3b1385f1b",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -29,7 +29,7 @@
         },
         "id_user": {
           "name": "id_user",
-          "type": "uuid",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true
         },
@@ -107,7 +107,7 @@
         },
         "id_user": {
           "name": "id_user",
-          "type": "uuid",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true
         },
@@ -198,7 +198,7 @@
         },
         "id_user": {
           "name": "id_user",
-          "type": "uuid",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true
         },
@@ -263,10 +263,9 @@
       "columns": {
         "id_user": {
           "name": "id_user",
-          "type": "uuid",
+          "type": "serial",
           "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
+          "notNull": true
         },
         "clerk_id": {
           "name": "clerk_id",
