@@ -2,6 +2,8 @@
 import { UserButton } from "@clerk/nextjs";
 import { currentUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
+import { getPaymentsUserId } from "../lib/auth";
+import { get } from "http";
 
 export default async function DashboardPage() {
   // Obtenemos todos los datos del usuario directamente en el servidor
@@ -11,6 +13,8 @@ export default async function DashboardPage() {
   if (!user) {
     redirect("/");
   }
+
+  const userId = await getPaymentsUserId();
 
   return (
     <div className="min-h-screen p-8 bg-gray-100">
@@ -25,7 +29,8 @@ export default async function DashboardPage() {
           Bienvenido de nuevo, {user.firstName || "Usuario"}
         </h2>
         <p className="text-gray-600 mb-4">
-          Tu ID de Clerk es: <code className="bg-gray-100 p-1 rounded">{user.id}</code>
+          Tu ID de Clerk es: <code className="bg-gray-100 p-1 rounded">{user.id}</code>\n
+          Tu ID de usuario es  <code className="bg-gray-100 p-1 rounded">{userId}</code>
         </p>
         <p className="text-gray-600">
           Email principal: {user.emailAddresses[0]?.emailAddress}

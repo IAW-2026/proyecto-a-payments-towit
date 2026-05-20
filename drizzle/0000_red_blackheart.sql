@@ -2,7 +2,7 @@ CREATE TABLE "disbursements" (
 	"transaction_id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"trip_id" varchar(255) NOT NULL,
 	"amount" numeric(12, 2) NOT NULL,
-	"id_user" uuid NOT NULL,
+	"id_user" integer NOT NULL,
 	"payment_alias" varchar(255) NOT NULL,
 	"platform_fee" numeric(12, 2) NOT NULL,
 	"external_id" varchar(255),
@@ -13,7 +13,7 @@ CREATE TABLE "disbursements" (
 CREATE TABLE "payments" (
 	"transaction_id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"trip_id" varchar(255) NOT NULL,
-	"id_user" uuid NOT NULL,
+	"id_user" integer NOT NULL,
 	"amount" numeric(12, 2) NOT NULL,
 	"external_id" varchar(255),
 	"status" varchar(50) DEFAULT 'PENDING' NOT NULL,
@@ -26,7 +26,7 @@ CREATE TABLE "refunds" (
 	"transaction_id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"trip_id" varchar(255) NOT NULL,
 	"amount" numeric(12, 2) NOT NULL,
-	"id_user" uuid NOT NULL,
+	"id_user" integer NOT NULL,
 	"refund_type" varchar(50) NOT NULL,
 	"external_id" varchar(255),
 	"reason" text,
@@ -35,7 +35,7 @@ CREATE TABLE "refunds" (
 );
 --> statement-breakpoint
 CREATE TABLE "users" (
-	"id_user" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"id_user" serial PRIMARY KEY NOT NULL,
 	"clerk_id" varchar(255) NOT NULL,
 	CONSTRAINT "users_clerk_id_unique" UNIQUE("clerk_id")
 );
