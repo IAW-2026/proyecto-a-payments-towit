@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { db } from "@/db";
 import { users } from "@/db/schema";
 import { eq } from "drizzle-orm";
+import { encrypt } from "@/app/lib/crypto";
 
 const COOKIE_NAME = "payments_internal_session";
 const COOKIE_EXPIRATION = 60 * 60; // 1 hora
@@ -35,7 +36,8 @@ export async function GET(request: Request) {
         }
     }
 
-    const secureCookieValue = `${currentClerkId}:${dbUser.id_user}`;
+    const rawCookieValue = `${currentClerkId}:${dbUser.id_user}`;
+    const secureCookieValue = encrypt(rawCookieValue);
     const cookieStore = await cookies();
     
     cookieStore.set(COOKIE_NAME, secureCookieValue, {

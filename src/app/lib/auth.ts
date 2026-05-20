@@ -2,6 +2,7 @@
 import { auth } from "@clerk/nextjs/server";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { decrypt } from "./crypto";
 
 const COOKIE_NAME = "payments_internal_session";
 
@@ -17,9 +18,14 @@ export async function getPaymentsUserId(currentPath: string = "/dashboard"): Pro
     const localSessionCookie = cookieStore.get(COOKIE_NAME);
 
     if (localSessionCookie) {
-        const [cookieClerkId, cookieDbId] = localSessionCookie.value.split(":");
-        if (cookieClerkId === currentClerkId && cookieDbId) {
-            return parseInt(cookieDbId, 10);
+        const rawCookieValue = decrypt(localSessionCookie.value)
+        
+        if(rawCookieValue)
+        {
+            const [cookieClerkId, cookieDbId] = rawCookieValue.split(":");
+            if (cookieClerkId === currentClerkId && cookieDbId) {
+                return parseInt(cookieDbId, 10);
+            }
         }
     }
 
