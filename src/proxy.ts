@@ -4,20 +4,14 @@ import { NextResponse } from 'next/server';
 // Define public routes that don't require authentication
 const isPublicRoute = createRouteMatcher(['/', '/api/(.*)']);
 
-// Define the home route matcher for the root path
-const isHomeRoute = createRouteMatcher(['/']);
-
 export default clerkMiddleware(async (auth, req) => {
     // Get authentication information about the current user
     const { userId } = await auth();
 
-    if (userId && isHomeRoute(req)) {
-        return NextResponse.redirect(new URL('/dashboard', req.url));
-    }
-
     if (!isPublicRoute(req)) {
         await auth.protect();
     }
+
 });
 
 export const config = {

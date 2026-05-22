@@ -1,5 +1,7 @@
 // Translates db schemas defined in documentation to TS code
-import { pgTable, serial, uuid, varchar, decimal, timestamp, text, integer } from "drizzle-orm/pg-core";
+import { pgTable, serial, uuid, varchar, decimal, timestamp, text, integer, pgEnum} from "drizzle-orm/pg-core";
+
+export const refundTypeEnum = pgEnum('refund_type_enum', ['TOTAL', 'PARTIAL']);
 
 // Users table
 export const users = pgTable('users', {
@@ -39,9 +41,9 @@ export const refunds = pgTable('refunds', {
     trip_id: varchar('trip_id', { length: 255 }).notNull(),
     amount: decimal('amount', { precision: 12, scale: 2 }).notNull(),
     id_user: integer('id_user').references(() => users.id_user).notNull(), // FK al usuario devuelto
-    refund_type: varchar('refund_type', { length: 50 }).notNull(), // ej: 'TOTAL', 'PARTIAL'
+    refund_type: refundTypeEnum('refund_type').notNull(), // ej: 'TOTAL', 'PARTIAL'
     external_id: varchar('external_id', { length: 255 }),
-    reason: text('reason'), // text es mejor que varchar para descripciones largas
+    reason: text('reason'),
     status: varchar('status', { length: 50 }).notNull().default('REQUESTED'),
     created_at: timestamp('created_at').defaultNow().notNull(),
 });
