@@ -24,7 +24,7 @@ export default async function PaymentsPage({ searchParams }: DashboardProps) {
   const offset = (currentPage - 1) * ITEMS_PER_PAGE;
 
   // 2. Obtenemos el ID del usuario autenticado de forma segura
-  const paymentsUser = await getPaymentsUser();
+  const paymentsUser = await getPaymentsUser("/payments");
 
   // 3. Consultamos a Neon trayendo 5 elementos + 1 extra para verificar si hay una página siguiente
   const userPayments = await db.query.payments.findMany({

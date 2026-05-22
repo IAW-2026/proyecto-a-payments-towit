@@ -98,4 +98,5 @@ async function seedRefunds() {
 }
 
 // Ejecutamos la función
+seedPayments();
 seedRefunds();

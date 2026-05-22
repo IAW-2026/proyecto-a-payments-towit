@@ -17,14 +17,14 @@ interface DashboardProps {
   searchParams: SearchParams;
 }
 
-export default async function PaymentsPage({ searchParams }: DashboardProps) {
+export default async function RefundsPage({ searchParams }: DashboardProps) {
   // 1. Esperamos los parámetros de la URL y calculamos la página actual
   const resolvedParams = await searchParams;
   const currentPage = Math.max(1, Number(resolvedParams.page) || 1);
   const offset = (currentPage - 1) * ITEMS_PER_PAGE;
 
   // 2. Obtenemos el ID del usuario autenticado de forma segura
-  const paymentsUser = await getPaymentsUser();
+  const paymentsUser = await getPaymentsUser("/refunds");
 
   // 3. Consultamos a Neon trayendo 5 elementos + 1 extra para verificar si hay una página siguiente
   const userRefunds = await db.query.refunds.findMany({

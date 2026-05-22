@@ -24,7 +24,7 @@ export default async function DisbursementsPage({ searchParams }: DashboardProps
   const offset = (currentPage - 1) * ITEMS_PER_PAGE;
 
   // 2. Obtenemos el ID del usuario autenticado de forma segura
-  const paymentsUser = await getPaymentsUser();
+  const paymentsUser = await getPaymentsUser("/disbursements");
 
   // 3. Consultamos a Neon trayendo 5 elementos + 1 extra para verificar si hay una página siguiente
   const userDisbursements = await db.query.disbursements.findMany({

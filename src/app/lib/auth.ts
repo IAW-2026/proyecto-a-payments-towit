@@ -12,7 +12,7 @@ export interface PaymentsUser {
   fullName: string;
 }
 
-export async function getPaymentsUser(currentPath: string = "/dashboard"): Promise<PaymentsUser> {
+export async function getPaymentsUser(currentPath: string = "/"): Promise<PaymentsUser> {
     // 1. Obtenemos el ID de Clerk y los Claims personalizados directamente del JWT local
     const { userId, sessionClaims } = await auth();
     
