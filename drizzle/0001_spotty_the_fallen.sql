@@ -1,0 +1,2 @@
+CREATE TYPE "public"."refund_type_enum" AS ENUM('TOTAL', 'PARTIAL');--> statement-breakpoint
+ALTER TABLE "refunds" ALTER COLUMN "refund_type" SET DATA TYPE "public"."refund_type_enum" USING "refund_type"::"public"."refund_type_enum";

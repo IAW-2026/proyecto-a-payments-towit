@@ -8,6 +8,13 @@
       "when": 1779293849036,
       "tag": "0000_red_blackheart",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1779423791887,
+      "tag": "0001_spotty_the_fallen",
+      "breakpoints": true
     }
   ]
 }
