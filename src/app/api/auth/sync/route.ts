@@ -18,7 +18,7 @@ export async function GET(request: Request) {
     const currentClerkId = session.userId;
     
     const { searchParams } = new URL(request.url);
-    const callbackUrl = searchParams.get("callback") || "/dashboard";
+    const callbackUrl = searchParams.get("callback") || "/";
 
     let dbUser = await db.query.users.findFirst({
         where: eq(users.id_clerk, currentClerkId),

@@ -1,4 +1,3 @@
-// src/app/lib/auth.ts
 import { auth } from "@clerk/nextjs/server";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
@@ -6,29 +5,43 @@ import { decrypt } from "./crypto";
 
 const COOKIE_NAME = "payments_internal_session";
 
-// We pass as a parameter the current route to redirect back to it.
-export async function getPaymentsUserId(currentPath: string = "/dashboard"): Promise<number> {
-    const session = await auth();
-    if (!session || !session.userId) {
+export interface PaymentsUser {
+  id_user: number;
+  clerkId: string;
+  email: string;
+  fullName: string;
+}
+
+export async function getPaymentsUser(currentPath: string = "/"): Promise<PaymentsUser> {
+    // 1. Obtenemos el ID de Clerk y los Claims personalizados directamente del JWT local
+    const { userId, sessionClaims } = await auth();
+    
+    if (!userId) {
         redirect("/");
     }
 
-    const currentClerkId = session.userId;
     const cookieStore = await cookies();
     const localSessionCookie = cookieStore.get(COOKIE_NAME);
+    let dbUserId: number | null = null;
 
     if (localSessionCookie) {
-        const rawCookieValue = decrypt(localSessionCookie.value)
-        
-        if(rawCookieValue)
-        {
+        const rawCookieValue = decrypt(localSessionCookie.value);
+        if (rawCookieValue) {
             const [cookieClerkId, cookieDbId] = rawCookieValue.split(":");
-            if (cookieClerkId === currentClerkId && cookieDbId) {
-                return parseInt(cookieDbId, 10);
+            if (cookieClerkId === userId && cookieDbId) {
+                dbUserId = parseInt(cookieDbId, 10);
             }
         }
     }
 
-    // If cookie is not valid or is not created
-    redirect(`/api/auth/sync?callback=${encodeURIComponent(currentPath)}`);
+    if (dbUserId === null) {
+        redirect(`/api/auth/sync?callback=${encodeURIComponent(currentPath)}`);
+    }
+
+    return {
+        id_user: dbUserId,
+        clerkId: userId,
+        email: sessionClaims?.email || "sin-email@towit.com",
+        fullName: sessionClaims?.fullName || "Usuario de TowIt",
+    };
 }
