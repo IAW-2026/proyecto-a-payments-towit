@@ -1,3 +1,4 @@
+CREATE TYPE "public"."refund_type_enum" AS ENUM('TOTAL', 'PARTIAL');--> statement-breakpoint
 CREATE TABLE "disbursements" (
 	"transaction_id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"trip_id" varchar(255) NOT NULL,
@@ -27,7 +28,7 @@ CREATE TABLE "refunds" (
 	"trip_id" varchar(255) NOT NULL,
 	"amount" numeric(12, 2) NOT NULL,
 	"id_user" integer NOT NULL,
-	"refund_type" varchar(50) NOT NULL,
+	"refund_type" "refund_type_enum" NOT NULL,
 	"external_id" varchar(255),
 	"reason" text,
 	"status" varchar(50) DEFAULT 'REQUESTED' NOT NULL,

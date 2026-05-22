@@ -1,5 +1,5 @@
 {
-  "id": "e1291111-2738-482b-97e2-b7c3b1385f1b",
+  "id": "07e16111-e86d-4171-a8bc-4d89d17679ad",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -204,7 +204,8 @@
         },
         "refund_type": {
           "name": "refund_type",
-          "type": "varchar(50)",
+          "type": "refund_type_enum",
+          "typeSchema": "public",
           "primaryKey": false,
           "notNull": true
         },
@@ -291,7 +292,16 @@
       "isRLSEnabled": false
     }
   },
-  "enums": {},
+  "enums": {
+    "public.refund_type_enum": {
+      "name": "refund_type_enum",
+      "schema": "public",
+      "values": [
+        "TOTAL",
+        "PARTIAL"
+      ]
+    }
+  },
   "schemas": {},
   "sequences": {},
   "roles": {},
