@@ -10,12 +10,15 @@
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "tsx src/db/migrate.ts"
+    "db:migrate": "tsx src/db/migrate.ts",
+    "test": "vitest",
+    "test:ci": "vitest run"
   },
   "dependencies": {
     "@clerk/nextjs": "^7.3.4",
     "@neondatabase/serverless": "^1.1.0",
     "drizzle-orm": "^0.45.2",
+    "mercadopago": "^3.0.0",
     "next": "^16.2.6",
     "react": "^19.2.6",
     "react-dom": "^19.2.6"
@@ -32,6 +35,7 @@
     "eslint-config-next": "16.2.5",
     "tailwindcss": "^4",
     "tsx": "^4.22.0",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^4.1.7"
   }
 }
