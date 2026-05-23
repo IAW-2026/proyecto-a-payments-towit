@@ -5,6 +5,7 @@ import { db } from "@/db";
 import { users } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { encrypt } from "@/app/lib/crypto";
+import { getPaymentsUserId } from "@/db/queries/users";
 
 const COOKIE_NAME = "payments_internal_session";
 const COOKIE_EXPIRATION = 60 * 60; // 1 hora
@@ -20,23 +21,13 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const callbackUrl = searchParams.get("callback") || "/";
 
-    let dbUser = await db.query.users.findFirst({
-        where: eq(users.id_clerk, currentClerkId),
-    });
-
-    if (!dbUser) {
-        try {
-            const [newUser] = await db.insert(users).values({
-                id_clerk: currentClerkId,
-            }).returning();
-            dbUser = newUser;
-        } catch (error) {
-            console.error("Error crítico durante la creación lazy del usuario:", error);
-            return new Response("Error interno del servidor", { status: 500 });
-        }
+    let dbUserId = await getPaymentsUserId(currentClerkId);
+    // Check later how to show an error message to the user instead of just returning a response with the error, maybe redirect to an error page or something like that
+    if (dbUserId === null) {
+        return new Response("Critical error during user id retrieval.", { status: 500 });
     }
 
-    const rawCookieValue = `${currentClerkId}:${dbUser.id_user}`;
+    const rawCookieValue = `${currentClerkId}:${dbUserId}`;
     const secureCookieValue = encrypt(rawCookieValue);
     const cookieStore = await cookies();
     
