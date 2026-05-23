@@ -2,4 +2,4 @@
 import { MercadoPagoConfig, Preference } from 'mercadopago';
 
 // Agrega credenciales
-const client = new MercadoPagoConfig({ accessToken:  process.env.MERCADO_PAGO_ACCESS_TOKEN || ""});
+export const client = new MercadoPagoConfig({ accessToken: process.env.MP_ACCESS_TOKEN as string });
