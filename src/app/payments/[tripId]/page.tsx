@@ -49,11 +49,9 @@ export default async function TripPaymentPage({ params }: PageProps) {
             const baseUrl = process.env.NEXT_PUBLIC_APP_URL as string;
 
             console.log("URL DE NOTIFICACION:", baseUrl);
-            console.log("Notification URL:", `${baseUrl}/api/webhook/mercadopago/${payment.trip_id}`);
 
             const result = await preference.create({
                 body: {
-                    notification_url: `${baseUrl}/api/webhook/mercadopago/${payment.trip_id}`, 
                     items: [
                         {
                             id: payment.trip_id,
