@@ -52,6 +52,7 @@ export default async function TripPaymentPage({ params }: PageProps) {
 
             const result = await preference.create({
                 body: {
+                    notification_url: `${baseUrl}/api/webhook/mercadopago`, 
                     items: [
                         {
                             id: payment.trip_id,
