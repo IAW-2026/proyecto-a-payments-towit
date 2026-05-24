@@ -2,11 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { payments } from "@/db/schema";
 import { eq } from "drizzle-orm";
+import { getPaymentsUserId } from "@/db/queries/users";
 
 
 interface PaymentPayload {
     tripId: string;
-    clerkId: number;
+    clerkId: string;
     amount: number;
 }
 
@@ -65,9 +66,9 @@ function requestAuthorization(req: NextRequest): NextResponse | null {
 function requestDataValidation(payload: Partial<PaymentPayload>): NextResponse | null {
     const { tripId, clerkId, amount } = payload;
 
-    if (!tripId || typeof tripId !== "string" || !clerkId || typeof amount !== "number") {
+    if (!tripId || typeof tripId !== "string" || !clerkId || typeof clerkId !== "string" || typeof amount !== "number") {
         return NextResponse.json(
-            { error: "Invalid payload. tripId (string), clerkId (number) and amount (number) are required." },
+            { error: "Invalid payload. tripId (string), clerkId (string) and amount (number) are required." },
             { status: 400 }
         );
     }
@@ -98,10 +99,15 @@ async function checkExistingTransaction(tripId: string): Promise<NextResponse | 
     return null;
 }
 
-async function executePaymentInsertion(tripId: string, clerkId: number, amount: number): Promise<string> {
+async function executePaymentInsertion(tripId: string, clerkId: string, amount: number): Promise<string> {
+    const userId = await getPaymentsUserId(clerkId);
+    if (!userId) {
+        throw new Error(`El usuario de Clerk ${clerkId} no existe en la base de datos local.`);
+    }
+    
     const [newPayment] = await db.insert(payments).values({
         trip_id: tripId,
-        id_user: clerkId,
+        id_user: userId,
         amount: amount.toString(),
         status: "PENDING",
         external_id: null,
