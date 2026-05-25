@@ -9,6 +9,9 @@ import { MercadoPagoConfig, Preference } from "mercadopago";
 import { client } from "@/app/lib/mercadoPago";
 import { getPaymentsUser } from "@/app/lib/auth";
 import MercadoPagoButton from "@/components/MercadoPagoButton";
+import { TransactionStatus } from "@/types/transaction";
+import TransactionDetailsCard from "@/components/TransactionDetailsCard";
+import Link from "next/dist/client/link";
 
 
 interface PageProps {
@@ -107,59 +110,33 @@ export default async function TripPaymentPage({ params }: PageProps) {
             </div>
         );
     }else {
-        //Payment data dump, later replace it with a component.
-        const statusColors: Record<string, string> = {
-            COMPLETED: "bg-green-100 text-green-800 border-green-200",
-            FAILED: "bg-red-100 text-red-800 border-red-200",
-            REFUNDED: "bg-orange-100 text-orange-800 border-orange-200",
-        };
-        const statusStyle = statusColors[payment.status] || "bg-slate-100 text-slate-800 border-slate-200";
-
         return (
-            <div className="min-h-[calc(100vh-4rem)] flex flex-col items-center justify-center bg-slate-50 p-4">
-                <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-200 max-w-xl w-full">
-                    <div className="flex justify-between items-center mb-6">
-                        <h2 className="text-2xl font-bold text-slate-900">Detalles de la Transacción</h2>
-                        <span className={`px-3 py-1 rounded-full text-xs font-bold border uppercase tracking-wider ${statusStyle}`}>
-                            {payment.status}
-                        </span>
-                    </div>
+            <div className="min-h-[calc(100vh-4rem)] bg-slate-50 flex flex-col items-center justify-center p-4 gap-6">
+                
+                <div className="text-center space-y-2 mt-4 sm:mt-0">
+                    <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">
+                        Resumen de Transacción
+                    </h1>
+                    <p className="text-slate-500 text-sm max-w-md mx-auto">
+                        Aquí podés verificar el estado actual y los registros analíticos detallados del cobro correspondiente a este viaje.
+                    </p>
+                </div>
 
-                    <div className="space-y-4 text-sm">
-                        {/* Bloque de IDs */}
-                        <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 space-y-2">
-                            <div className="flex flex-col">
-                                <span className="text-slate-500 text-xs font-semibold uppercase tracking-wider">Transaction ID (Interno)</span>
-                                <span className="font-mono text-slate-900 break-all">{payment.transaction_id}</span>
-                            </div>
-                            <div className="flex flex-col">
-                                <span className="text-slate-500 text-xs font-semibold uppercase tracking-wider">ID de Mercado Pago</span>
-                                <span className="font-mono text-slate-900">{payment.external_id || "No registrado"}</span>
-                            </div>
-                            <div className="flex flex-col">
-                                <span className="text-slate-500 text-xs font-semibold uppercase tracking-wider">Trip ID</span>
-                                <span className="font-mono text-slate-900">{payment.trip_id}</span>
-                            </div>
-                        </div>
+                <div className="w-full max-w-2xl">
+                    <TransactionDetailsCard 
+                        type="PAYMENT" 
+                        {...payment} 
+                        status={payment.status as TransactionStatus} 
+                    />
+                </div>
 
-                        {/* Bloque Financiero */}
-                        <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 flex justify-between items-center">
-                            <span className="text-slate-500 font-semibold uppercase tracking-wider text-xs">Monto Total</span>
-                            <span className="text-xl font-black text-slate-900">${payment.amount}</span>
-                        </div>
-
-                        {/* Bloque de Tiempos */}
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
-                                <span className="block text-slate-500 text-xs font-semibold uppercase tracking-wider mb-1">Creado el</span>
-                                <span className="text-slate-900">{payment.created_at?.toLocaleString('es-AR')}</span>
-                            </div>
-                            <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
-                                <span className="block text-slate-500 text-xs font-semibold uppercase tracking-wider mb-1">Última act.</span>
-                                <span className="text-slate-900">{payment.updated_at?.toLocaleString('es-AR')}</span>
-                            </div>
-                        </div>
-                    </div>
+                <div className="flex justify-center w-full max-w-2xl mt-2 mb-8">
+                    <Link 
+                        href="/payments" 
+                        className="px-6 py-3 bg-white border border-slate-200 text-slate-700 font-semibold rounded-xl shadow-sm hover:bg-slate-50 hover:text-slate-900 hover:border-slate-300 transition-all text-center text-sm w-full sm:w-auto min-w-[200px]"
+                    >
+                        Volver a mis pagos
+                    </Link>
                 </div>
             </div>
         );
