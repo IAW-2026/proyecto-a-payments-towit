@@ -1,5 +1,6 @@
 // Translates db schemas defined in documentation to TS code
 import { pgTable, serial, uuid, varchar, decimal, timestamp, text, integer, pgEnum} from "drizzle-orm/pg-core";
+import { TransactionStatus } from "@/types/transaction";
 
 export const refundTypeEnum = pgEnum('refund_type_enum', ['TOTAL', 'PARTIAL']);
 
@@ -16,7 +17,7 @@ export const payments = pgTable('payments', {
     id_user: integer('id_user').references(() => users.id_user).notNull(), // FK al usuario que paga
     amount: decimal('amount', { precision: 12, scale: 2 }).notNull(),
     external_id: varchar('external_id', { length: 255 }), // Puede ser null hasta que MP lo confirme
-    status: varchar('status', { length: 50 }).notNull().default('PENDING'),
+    status: varchar('status', { length: 50 }).$type<TransactionStatus>().notNull().default('PENDING'),
     created_at: timestamp('created_at').defaultNow().notNull(),
     updated_at: timestamp('updated_at').defaultNow().notNull(),
     expiration_date: timestamp('expiration_date'),
@@ -31,7 +32,7 @@ export const disbursements = pgTable('disbursements', {
     payment_alias: varchar('payment_alias', { length: 255 }).notNull(),
     platform_fee: decimal('platform_fee', { precision: 12, scale: 2 }).notNull(),
     external_id: varchar('external_id', { length: 255 }),
-    status: varchar('status', { length: 50 }).notNull().default('PENDING'),
+    status: varchar('status', { length: 50 }).$type<TransactionStatus>().notNull().default('PENDING'),
     created_at: timestamp('created_at').defaultNow().notNull(),
 });
 
@@ -44,6 +45,6 @@ export const refunds = pgTable('refunds', {
     refund_type: refundTypeEnum('refund_type').notNull(), // ej: 'TOTAL', 'PARTIAL'
     external_id: varchar('external_id', { length: 255 }),
     reason: text('reason'),
-    status: varchar('status', { length: 50 }).notNull().default('REQUESTED'),
+    status: varchar('status', { length: 50 }).$type<TransactionStatus>().notNull().default('PENDING'),
     created_at: timestamp('created_at').defaultNow().notNull(),
 });
