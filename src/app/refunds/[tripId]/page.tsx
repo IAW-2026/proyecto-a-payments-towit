@@ -2,7 +2,7 @@
 import { db } from "@/db";
 import { refunds } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
-import { getPaymentsUser } from "@/app/lib/auth";
+import { ReadCookieUserInformation } from "@/app/lib/auth";
 import { TransactionStatus } from "@/types/transaction";
 import TransactionDetailsCard from "@/components/TransactionDetailsCard";
 import Link from "next/link";
@@ -15,7 +15,7 @@ export default async function RefundDetailPage({ params }: PageProps) {
     const { tripId } = await params;
 
     // 1. Autenticación y obtención del usuario interno
-    const internalUser = await getPaymentsUser(`/refunds/${tripId}`);
+    const internalUser = await ReadCookieUserInformation(`/refunds/${tripId}`);
     if (!internalUser) throw new Error("Error obteniendo el usuario interno");
 
     // 2. Consulta a la tabla de reembolsos (Refunds)
