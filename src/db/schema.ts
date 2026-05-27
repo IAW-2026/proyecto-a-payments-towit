@@ -8,6 +8,7 @@ export const refundTypeEnum = pgEnum('refund_type_enum', ['TOTAL', 'PARTIAL']);
 export const users = pgTable('users', {
     id_user: serial('id_user').primaryKey(),
     id_clerk: varchar('clerk_id', { length: 255 }).notNull().unique(),
+    balance: decimal('balance', { precision: 12, scale: 2 }).notNull().default('0.00'),
 });
 
 // Payments table

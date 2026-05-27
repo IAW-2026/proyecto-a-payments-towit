@@ -3,7 +3,7 @@ import Link from "next/link";
 import { db } from "@/db";
 import { disbursements } from "@/db/schema";
 import { desc, eq } from "drizzle-orm";
-import { getPaymentsUser } from "@/app/lib/auth";
+import { ReadCookieUserInformation } from "@/app/lib/auth";
 import TransactionCard from "@/components/TransactionCard";
 
 export const dynamic = "force-dynamic";
@@ -24,7 +24,7 @@ export default async function DisbursementsPage({ searchParams }: DashboardProps
   const offset = (currentPage - 1) * ITEMS_PER_PAGE;
 
   // 2. Obtenemos el ID del usuario autenticado de forma segura
-  const paymentsUser = await getPaymentsUser("/disbursements");
+  const paymentsUser = await ReadCookieUserInformation("/disbursements");
 
   // 3. Consultamos a Neon trayendo 5 elementos + 1 extra para verificar si hay una página siguiente
   const userDisbursements = await db.query.disbursements.findMany({

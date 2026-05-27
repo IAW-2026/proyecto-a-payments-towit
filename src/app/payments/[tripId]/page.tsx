@@ -4,10 +4,9 @@ import { redirect } from "next/navigation";
 import { db } from "@/db";
 import { payments } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
-import { getPaymentsUserId } from "@/db/queries/users";
 import { MercadoPagoConfig, Preference } from "mercadopago";
 import { client } from "@/app/lib/mercadoPago";
-import { getPaymentsUser } from "@/app/lib/auth";
+import { ReadCookieUserInformation } from "@/app/lib/auth";
 import MercadoPagoButton from "@/components/MercadoPagoButton";
 import { TransactionStatus } from "@/types/transaction";
 import TransactionDetailsCard from "@/components/TransactionDetailsCard";
@@ -22,7 +21,7 @@ export default async function TripPaymentPage({ params }: PageProps) {
     const { tripId } = await params;
 
     // If userId is not found, show a message (CHANGE IT LATER TO A NICE 404 PAGE)
-    const internalUser = await getPaymentsUser(`/payments/${tripId}`);
+    const internalUser = await ReadCookieUserInformation(`/payments/${tripId}`);
     if (!internalUser) throw new Error("Error obteniendo el usuario interno");
 
 

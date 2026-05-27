@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { payments } from "@/db/schema";
 import { eq } from "drizzle-orm";
-import { getPaymentsUserId } from "@/db/queries/users";
+import { getPaymentsUser } from "@/db/queries/users";
 
 
 interface PaymentPayload {
@@ -100,14 +100,14 @@ async function checkExistingTransaction(tripId: string): Promise<NextResponse | 
 }
 
 async function executePaymentInsertion(tripId: string, clerkId: string, amount: number): Promise<string> {
-    const userId = await getPaymentsUserId(clerkId);
-    if (!userId) {
+    const user = await getPaymentsUser(clerkId);
+    if (!user) {
         throw new Error(`El usuario de Clerk ${clerkId} no existe en la base de datos local.`);
     }
     
     const [newPayment] = await db.insert(payments).values({
         trip_id: tripId,
-        id_user: userId,
+        id_user: user.userId,
         amount: amount.toString(),
         status: "PENDING",
         external_id: null,
