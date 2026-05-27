@@ -2,7 +2,12 @@ import { db } from "@/db";
 import { users } from "@/db/schema";
 import { eq } from "drizzle-orm";
 
-export async function getPaymentsUserId(clerkId: string): Promise<number | null> {
+export type userInformation = {
+    userId: number;
+    balance: string;
+}
+
+export async function getPaymentsUser(clerkId: string): Promise<userInformation | null> {
     let dbUser = await db.query.users.findFirst({
         where: eq(users.id_clerk, clerkId),
     });
@@ -19,5 +24,5 @@ export async function getPaymentsUserId(clerkId: string): Promise<number | null>
         }
     }
 
-    return dbUser.id_user;
+    return { userId: dbUser.id_user, balance: dbUser.balance };
 }
