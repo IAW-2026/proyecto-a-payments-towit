@@ -14,7 +14,7 @@ export const users = pgTable('users', {
 // Payments table
 export const payments = pgTable('payments', {
     transaction_id: uuid('transaction_id').defaultRandom().primaryKey(),
-    trip_id: varchar('trip_id', { length: 255 }).notNull(),
+    trip_id: varchar('trip_id', { length: 255 }).notNull().unique(),
     id_user: integer('id_user').references(() => users.id_user).notNull(), // FK al usuario que paga
     amount: decimal('amount', { precision: 12, scale: 2 }).notNull(),
     external_id: varchar('external_id', { length: 255 }), // Puede ser null hasta que MP lo confirme
@@ -27,7 +27,7 @@ export const payments = pgTable('payments', {
 // Disbursements table
 export const disbursements = pgTable('disbursements', {
     transaction_id: uuid('transaction_id').defaultRandom().primaryKey(),
-    trip_id: varchar('trip_id', { length: 255 }).notNull(),
+    trip_id: varchar('trip_id', { length: 255 }).notNull().unique(),
     amount: decimal('amount', { precision: 12, scale: 2 }).notNull(),
     id_user: integer('id_user').references(() => users.id_user).notNull(), // FK al usuario que recibe
     payment_alias: varchar('payment_alias', { length: 255 }).notNull(),
