@@ -1,6 +1,6 @@
 import { db } from "@/db";
 import { users } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 
 export type userInformation = {
     userId: number;
@@ -8,21 +8,14 @@ export type userInformation = {
 }
 
 export async function getPaymentsUser(clerkId: string): Promise<userInformation | null> {
-    let dbUser = await db.query.users.findFirst({
-        where: eq(users.id_clerk, clerkId),
-    });
-
-    if (!dbUser) {
-        try {
-            const [newUser] = await db.insert(users).values({
-                id_clerk: clerkId,
-            }).returning();
-            dbUser = newUser;
-        } catch (error) {
-            console.error("Critical error during lazy creation of user:", error);
-            return null;
-        }
-    }
+    // No race conditions since clerkId is unique and we do an upsert
+    const [dbUser] = await db.insert(users)
+        .values({ id_clerk: clerkId })
+        .onConflictDoUpdate({
+            target: users.id_clerk,
+            set: { id_clerk: sql`EXCLUDED.clerk_id` } 
+        })
+        .returning();
 
     return { userId: dbUser.id_user, balance: dbUser.balance };
 }

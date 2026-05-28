@@ -21,13 +21,13 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const callbackUrl = searchParams.get("callback") || "/";
 
-    let dbUserId = await getPaymentsUser(currentClerkId);
+    let user = await getPaymentsUser(currentClerkId);
     // Check later how to show an error message to the user instead of just returning a response with the error, maybe redirect to an error page or something like that
-    if (dbUserId === null) {
+    if (!user) {
         return new Response("Critical error during user id retrieval.", { status: 500 });
     }
 
-    const rawCookieValue = `${currentClerkId}:${dbUserId}`;
+    const rawCookieValue = `${currentClerkId}:${user.userId}`;
     const secureCookieValue = encrypt(rawCookieValue);
     const cookieStore = await cookies();
     
