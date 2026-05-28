@@ -18,7 +18,7 @@ function isRequestAuthorized(req: NextRequest): boolean {
     const validKey = process.env.INTERNAL_API_SECRET;
     
     if (!validKey) {
-        console.warn("CRÍTICO: INTERNAL_API_SECRET no está configurada en el servidor.");
+        console.warn("Critical: INTERNAL_API_SECRET not configured.");
         return false;
     }
     
@@ -27,7 +27,7 @@ function isRequestAuthorized(req: NextRequest): boolean {
 
 function calculateDisbursement(totalAmount: number, feePercentage: number) {
     if (feePercentage < 0 || feePercentage >= 100) {
-        throw new Error("El porcentaje de comisión debe ser mayor a 0 y menor a 100.");
+        throw new Error("The fee percentage must be greater than 0 and less than 100.");
     }
     
     const platformFee = totalAmount * (feePercentage / 100);
@@ -49,14 +49,7 @@ async function getTripContext(clerkId: string, tripId: string) {
         )
     });
 
-    const existingDisbursement = await db.query.disbursements.findFirst({
-        where: and(
-            eq(disbursements.trip_id, tripId),
-            eq(disbursements.status, "COMPLETED")
-        )
-    });
-
-    return { driver, paymentRecord, existingDisbursement };
+    return { driver, paymentRecord };
 }
 
 async function executeDisbursementTransaction(
@@ -86,23 +79,25 @@ async function executeDisbursementTransaction(
 }
 
 export async function POST(req: NextRequest) {
+    let tripId = "unknown"; // for logging purposes in case of early failures
+
     try {
         if (!isRequestAuthorized(req)) {
-            return NextResponse.json({ error: "No autorizado. API Key inválida o faltante." }, { status: 401 });
+            return NextResponse.json({ error: "Missing or invalid API key" }, { status: 401 });
         }
 
         // Parsing and structural validation
         const body = (await req.json()) as DisbursementRequestBody;
-        const { clerkId, tripId, feePercentage } = body;
+        const { clerkId, feePercentage } = body;
+        tripId = body.tripId; // Update tripId for logging
         if (!clerkId || !tripId || feePercentage === undefined) {
-            return NextResponse.json({ error: "Faltan parámetros obligatorios (clerkId, tripId, feePercentage)" }, { status: 400 });
+            return NextResponse.json({ error: "Missing required parameters (clerkId, tripId, feePercentage)" }, { status: 400 });
         }
 
         // Contextual validation
-        const { driver, paymentRecord, existingDisbursement } = await getTripContext(clerkId, tripId);
+        const { driver, paymentRecord } = await getTripContext(clerkId, tripId);
         if (!driver) return NextResponse.json({ error: "Could not process driver" }, { status: 500 });
         if (!paymentRecord) return NextResponse.json({ error: "Trip payment not found" }, { status: 400 });
-        if (existingDisbursement) return NextResponse.json({ error: "Trip already disbursed" }, { status: 409 });
 
         
         let calculation;
@@ -124,8 +119,17 @@ export async function POST(req: NextRequest) {
             message: "Disbursement successful",
         }, { status: 201 });
 
-    } catch (error) {
-        console.error("Critical error during disbursement:", error);
+    } catch (error: any) {
+        // Detecting unique constraint violation for concurrency handling
+        if (error.code === '23505' || (error.message && error.message.includes('unique constraint'))) {
+            console.warn(`[Concurrency] Double disbursement attempt for trip: ${tripId}`);
+            return NextResponse.json(
+                { error: "Conflict: The trip has already been disbursed." }, 
+                { status: 409 }
+            );
+        }
+
+        console.error(`Critical error during disbursement for trip ${tripId}:`, error);
         return NextResponse.json({ error: "Internal server error" }, { status: 500 });
     }
 }

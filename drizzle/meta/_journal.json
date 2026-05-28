@@ -15,6 +15,13 @@
       "when": 1779848231625,
       "tag": "0001_groovy_xavin",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1779929096388,
+      "tag": "0002_puzzling_demogoblin",
+      "breakpoints": true
     }
   ]
 }

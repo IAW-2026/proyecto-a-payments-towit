@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { payments } from "@/db/schema";
-import { eq } from "drizzle-orm";
 import { getPaymentsUser } from "@/db/queries/users";
 
 
@@ -24,11 +23,14 @@ export async function POST(req: NextRequest) {
         
         const { tripId, clerkId, amount } = body as PaymentPayload;
 
-        // Check Idempotency (Existing Transactions)
-        const idempotencyError = await checkExistingTransaction(tripId);
-        if (idempotencyError) return idempotencyError;
-
         const newTransactionId = await executePaymentInsertion(tripId, clerkId, amount);
+        if (!newTransactionId) {
+            console.warn(`Payment for tripId ${tripId} already exists. ClerkId: ${clerkId}, Amount: ${amount}`);
+            return NextResponse.json(
+                { error: "Payment already exists." },
+                { status: 409 }
+            );
+        }
 
         return NextResponse.json(
             {
@@ -57,7 +59,7 @@ function requestAuthorization(req: NextRequest): NextResponse | null {
     }
 
     if (!authHeader || authHeader !== `Bearer ${expectedSecret}`) {
-        return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+        return NextResponse.json({ error: "Not authorized" }, { status: 401 });
     }
 
     return null;
@@ -80,40 +82,26 @@ function requestDataValidation(payload: Partial<PaymentPayload>): NextResponse |
     return null;
 }
 
-async function checkExistingTransaction(tripId: string): Promise<NextResponse | null> {
-    const existingPayment = await db.query.payments.findFirst({
-        where: eq(payments.trip_id, tripId),
-    });
-
-    if (existingPayment) {
-        return NextResponse.json(
-            {
-                message: "Transaction for this trip already exists",
-                transaction_id: existingPayment.transaction_id,
-                status: existingPayment.status
-            },
-            { status: 409 }
-        );
-    }
-
-    return null;
-}
-
-async function executePaymentInsertion(tripId: string, clerkId: string, amount: number): Promise<string> {
+async function executePaymentInsertion(tripId: string, clerkId: string, amount: number): Promise<string | null> {
     const user = await getPaymentsUser(clerkId);
     if (!user) {
         throw new Error(`El usuario de Clerk ${clerkId} no existe en la base de datos local.`);
     }
     
-    const [newPayment] = await db.insert(payments).values({
+    const result = await db.insert(payments).values({
         trip_id: tripId,
         id_user: user.userId,
         amount: amount.toString(),
         status: "PENDING",
         external_id: null,
-    }).returning({
+    }).onConflictDoNothing({ target: payments.trip_id })
+    .returning({
         transactionId: payments.transaction_id,
     });
 
-    return newPayment.transactionId;
+    if (result.length === 0) {
+        return null; 
+    }
+
+    return result[0].transactionId;
 }

@@ -33,7 +33,7 @@ export async function ReadCookieUserInformation(currentPath: string = "/"): Prom
         }
     }
 
-    if (dbUserId === null) {
+    if (dbUserId === null || Number.isNaN(dbUserId)) {
         redirect(`/api/auth/sync?callback=${encodeURIComponent(currentPath)}`);
     }
 
