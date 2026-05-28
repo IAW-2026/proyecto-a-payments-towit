@@ -59,7 +59,7 @@ function requestAuthorization(req: NextRequest): NextResponse | null {
     }
 
     if (!authHeader || authHeader !== `Bearer ${expectedSecret}`) {
-        return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+        return NextResponse.json({ error: "Not authorized" }, { status: 401 });
     }
 
     return null;
