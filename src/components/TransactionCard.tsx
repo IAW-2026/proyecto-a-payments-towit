@@ -1,8 +1,7 @@
-// src/components/TransactionCard.tsx
 import React from "react";
 
 // Tipos extraídos para asegurar consistencia
-export type TransactionStatus = "PENDING" | "COMPLETED" | "FAILED" | "CANCELLED" | "REQUESTED";
+export type TransactionStatus = "PENDING" | "COMPLETED" | "FAILED" | "CANCELLED" | "REQUESTED" | "DISBURSED";
 
 interface BaseTransactionProps {
     tripId: string;
@@ -79,6 +78,18 @@ export default function TransactionCard(props: TransactionCardProps) {
             origin: { label: "TowIt App", sub: "Devolución de Fondos", initial: "T" },
             destination: { label: entityName, sub: `Viaje #${tripId}`, initial: entityName.charAt(0).toUpperCase() },
         },
+
+        DISBURSED: {
+            title: "Liquidado",
+            colorClass: "text-emerald-700",
+            bgClass: "bg-emerald-100",
+            borderClass: "border-emerald-200",
+            icon: (
+                <svg className="w-3 h-3 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+            )
+        },
     };
 
     // 2. Configuración de ESTADO
@@ -89,6 +100,7 @@ export default function TransactionCard(props: TransactionCardProps) {
             FAILED: { label: "Fallido", classes: "bg-red-100 text-red-700" },
             CANCELLED: { label: "Cancelado", classes: "bg-slate-200 text-slate-700" },
             REQUESTED: { label: "Solicitado", classes: "bg-slate-100 text-slate-600" },
+            DISBURSED: { label: "Liquidado", classes: "bg-emerald-100 text-emerald-700" },
         };
         return config[currentStatus.toUpperCase()] || { label: currentStatus, classes: "bg-slate-100 text-slate-700" };
     };
