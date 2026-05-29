@@ -12,6 +12,14 @@ interface DisbursementRequestBody {
     feePercentage: number; // Se explicita que es un porcentaje (ej. 15 para 15%)
 }
 
+interface TransactionResult {
+    status: number;
+    body: {
+        message?: string;
+        error?: string;
+    };
+}
+
 function isRequestAuthorized(req: NextRequest): boolean {
     // Busca la llave en los headers estándar de API o en Authorization
     const apiKey = req.headers.get("x-api-key") || req.headers.get("authorization")?.replace("Bearer ", "");
@@ -25,111 +33,97 @@ function isRequestAuthorized(req: NextRequest): boolean {
     return apiKey === validKey;
 }
 
-function calculateDisbursement(totalAmount: number, feePercentage: number) {
-    if (feePercentage < 0 || feePercentage >= 100) {
-        throw new Error("The fee percentage must be greater than 0 and less than 100.");
-    }
-    
-    const platformFee = totalAmount * (feePercentage / 100);
-    const netAmount = totalAmount - platformFee;
-    
-    return { 
-        platformFee: Number(platformFee.toFixed(2)), 
-        netAmount: Number(netAmount.toFixed(2)) 
-    };
-}
-
-async function getTripContext(clerkId: string, tripId: string) {
-    const driver = await getPaymentsUser(clerkId);
-
-    const paymentRecord = await db.query.payments.findFirst({
-        where: and(
-            eq(payments.trip_id, tripId),
-            eq(payments.status, "COMPLETED")
-        )
-    });
-
-    return { driver, paymentRecord };
-}
-
 async function executeDisbursementTransaction(
-    userId: number, 
+    clerkId: string, 
     tripId: string, 
-    netAmount: number, 
-    platformFee: number, 
-): Promise<void> {
+    feePercentage: number
+): Promise<TransactionResult> {
 
-    // Queries don't have to be awaited since they will be executed in a batch
-    const insertDisbursementQuery = db.insert(disbursements).values({
-        trip_id: tripId,
-        id_user: userId,
-        amount: netAmount.toString(),
-        platform_fee: platformFee.toString(),
-        payment_alias: "billetera.interna.towit", 
-        status: "COMPLETED" as TransactionStatus,
-    });
+    const driver = await getPaymentsUser(clerkId);
+    if (!driver) {
+        return { status: 404, body: { error: "Driver not found in database" } };
+    }
 
-    const updateBalanceQuery = db.update(users)
-        .set({ 
-            balance: sql`${users.balance} + ${netAmount}` 
-        })
-        .where(eq(users.id_user, userId));
+    try {
+        return await db.transaction(async (tx) => {            
+            const [paymentRecord] = await tx.select()
+                .from(payments)
+                .where(eq(payments.trip_id, tripId))
+                .for('update'); 
 
-    await db.batch([insertDisbursementQuery, updateBalanceQuery]);
+            if (!paymentRecord) {
+                return { status: 404, body: { error: "Trip payment not found" } };
+            }
+
+            if (paymentRecord.status !== "COMPLETED") {
+                return { status: 400, body: { error: `Cannot disburse. Payment status is ${paymentRecord.status}` } };
+            }
+
+            const platformFee = Number(paymentRecord.amount) * (feePercentage / 100);
+            const netAmount = Number(paymentRecord.amount) - platformFee;
+
+            // If trip is already disbursed, throws error 23055  
+            await tx.insert(disbursements).values({
+                trip_id: tripId,
+                id_user: driver.userId,
+                amount: netAmount.toFixed(2),
+                platform_fee: platformFee.toFixed(2),
+                payment_alias: "billetera.interna.towit", 
+                status: "COMPLETED",
+            });
+
+            await tx.update(users)
+                .set({ 
+                    balance: sql`${users.balance} + ${netAmount.toFixed(2)}` 
+                })
+                .where(eq(users.id_user, driver.userId));
+            
+
+            await tx.update(payments)
+                .set({ 
+                    status: "DISBURSED", // Actualizamos a nuestro nuevo estado terminal
+                    updated_at: new Date()
+                })
+                .where(eq(payments.trip_id, tripId));
+
+
+            return { status: 201, body: { message: "Disbursement successful" } };
+        });
+
+    } catch (error: any) {
+        if (error.code === '23505' || (error.message && error.message.includes('unique constraint'))) {
+            console.warn(`[Concurrency] Double disbursement attempt blocked for trip: ${tripId}`);
+            return { status: 409, body: { error: "Conflict: The trip has already been disbursed." } };
+        }
+
+        console.error(`Critical DB error during disbursement for trip ${tripId}:`, error);
+        return { status: 500, body: { error: "Internal server error during transaction" } };
+    }
 }
 
 export async function POST(req: NextRequest) {
-    let tripId = "unknown"; // for logging purposes in case of early failures
-
     try {
         if (!isRequestAuthorized(req)) {
             return NextResponse.json({ error: "Missing or invalid API key" }, { status: 401 });
         }
 
-        // Parsing and structural validation
         const body = (await req.json()) as DisbursementRequestBody;
-        const { clerkId, feePercentage } = body;
-        tripId = body.tripId; // Update tripId for logging
-        if (!clerkId || !tripId || feePercentage === undefined) {
-            return NextResponse.json({ error: "Missing required parameters (clerkId, tripId, feePercentage)" }, { status: 400 });
-        }
-
-        // Contextual validation
-        const { driver, paymentRecord } = await getTripContext(clerkId, tripId);
-        if (!driver) return NextResponse.json({ error: "Could not process driver" }, { status: 500 });
-        if (!paymentRecord) return NextResponse.json({ error: "Trip payment not found" }, { status: 400 });
-
+        const { clerkId, tripId, feePercentage } = body;
         
-        let calculation;
-        try {
-            calculation = calculateDisbursement(Number(paymentRecord.amount), feePercentage);
-        } catch (error: any) {
-            return NextResponse.json({ error: error.message }, { status: 400 });
+        if (!clerkId || !tripId || feePercentage === undefined) {
+            return NextResponse.json({ error: "Missing required parameters" }, { status: 400 });
         }
 
+        if (feePercentage < 0 || feePercentage >= 100) {
+            return NextResponse.json({ error: "Fee percentage must be between 0 and 99" }, { status: 400 });
+        }
 
-        await executeDisbursementTransaction(
-            driver.userId,
-            tripId,
-            calculation.netAmount,
-            calculation.platformFee,
-        );
+        const result = await executeDisbursementTransaction(clerkId, tripId, feePercentage);
 
-        return NextResponse.json({
-            message: "Disbursement successful",
-        }, { status: 201 });
+        return NextResponse.json(result.body, { status: result.status });
 
     } catch (error: any) {
-        // Detecting unique constraint violation for concurrency handling
-        if (error.code === '23505' || (error.message && error.message.includes('unique constraint'))) {
-            console.warn(`[Concurrency] Double disbursement attempt for trip: ${tripId}`);
-            return NextResponse.json(
-                { error: "Conflict: The trip has already been disbursed." }, 
-                { status: 409 }
-            );
-        }
-
-        console.error(`Critical error during disbursement for trip ${tripId}:`, error);
+        console.error("Critical server error in POST /api/disbursements:", error);
         return NextResponse.json({ error: "Internal server error" }, { status: 500 });
     }
 }

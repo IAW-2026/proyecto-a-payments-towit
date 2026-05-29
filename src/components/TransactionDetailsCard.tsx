@@ -52,6 +52,7 @@ const STATUS_COLORS: Record<TransactionStatus, string> = {
     REFUNDED: "bg-orange-100 text-orange-800 border-orange-200",
     PENDING: "bg-slate-100 text-slate-700 border-slate-200",
     CANCELLED: "bg-slate-200 text-slate-800 border-slate-300",
+    DISBURSED: "bg-emerald-100 text-emerald-800 border-emerald-200",
 };
 
 

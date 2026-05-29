@@ -1,4 +1,4 @@
-export type TransactionStatus = "PENDING" | "COMPLETED" | "FAILED" | "REFUNDED" | "CANCELLED";
+export type TransactionStatus = "PENDING" | "COMPLETED" | "FAILED" | "REFUNDED" | "CANCELLED" | "DISBURSED";
 
 
 interface BaseTransactionDetails {
