@@ -5,6 +5,7 @@ import { eq } from "drizzle-orm";
 import { Payment } from "mercadopago";
 import { client } from "@/app/lib/mercadoPago";
 import crypto from "crypto";
+import { processRefundTransaction } from "@/services/refund.service";
 
 interface MercadoPagoWebhookPayload {
     id: number;
@@ -109,35 +110,68 @@ async function processMercadoPagoPayment(mpPaymentId: string): Promise<void> {
         console.warn(`[Webhook MP] Ignored payment: No external_reference. MP ID: ${mpPaymentId}`);
         return;
     }
-
-    // Buscamos la transacción en Neon
-    const dbTransaction = await db.query.payments.findFirst({
-        where: eq(payments.transaction_id, transactionId)
-    });    
-    if (!dbTransaction) {
-        console.error(`[ALERTA MP] Inexistent transaction in DB: ${transactionId}`);
-        return;
-    }
-
-    // Verify amount to prevent tampering
-    if (Number(realPaymentData.transaction_amount) !== Number(dbTransaction.amount)) {
-        console.error(`[CRITICAL MP] Amount mismatch for transaction: ${transactionId}`);
-        return;
-    }
-
-    // Change only if there's a real change
     const newStatus = mapMercadoPagoStatus(realPaymentData.status);
-    if (dbTransaction.status === newStatus && dbTransaction.external_id === mpPaymentId) {
-        return;
-    }
-    await db.update(payments)
-        .set({
-            status: newStatus,
-            external_id: mpPaymentId,
-        })
-        .where(eq(payments.transaction_id, transactionId));
 
-    console.log(`[Webhook MP] Successfully updated transaction ${transactionId} to status ${newStatus}`);
+    await db.transaction(async (tx) => {
+        // Check payment in DB
+        const dbTransaction = await tx.select()
+            .from(payments)
+            .where(eq(payments.transaction_id, transactionId))
+            .limit(1)
+            .for('update')
+            .then(res => res[0]);
+        if (!dbTransaction) {
+            console.error(`[ALERTA MP] Inexistent transaction in DB: ${transactionId}`);
+            return;
+        }
+
+        // Verify amount to prevent tampering
+        if (Number(realPaymentData.transaction_amount) !== Number(dbTransaction.amount)) {
+            console.error(`[CRITICAL MP] Amount mismatch for transaction: ${transactionId}`);
+            return;
+        }
+
+        
+        // Auto-refund logic for late payments on cancelled trips
+        if (dbTransaction.status === "CANCELLED" && newStatus === "COMPLETED") {
+            console.log(`[Webhook MP] Late payment detected for cancelled trip. Initiating auto-refund for transaction ${transactionId}`);
+            
+            await tx.update(payments)
+                .set({ external_id: mpPaymentId })
+                .where(eq(payments.transaction_id, transactionId));
+
+            // PASAMOS LA TRANSACCIÓN (tx) AL SERVICIO PARA EVITAR DEADLOCKS
+            const refundResult = await processRefundTransaction(
+                dbTransaction.id_user,
+                dbTransaction.trip_id,
+                "TOTAL",
+                "Auto-Refund: Acreditación tardía de Mercado Pago en viaje cancelado",
+                true,
+                tx, // Propagated transaction context 
+                dbTransaction // Pre-fetched payment record
+            );
+
+            if (refundResult.status !== 201) {
+                throw new Error(`Auto-refund falló con status ${refundResult.status}`);
+            }
+            return;
+        }
+
+        // 3. LÓGICA NORMAL: Actualización de estado
+        if (dbTransaction.status === newStatus && dbTransaction.external_id === mpPaymentId) {
+            return;
+        }
+
+        await tx.update(payments)
+            .set({
+                status: newStatus,
+                external_id: mpPaymentId,
+                updated_at: new Date()
+            })
+            .where(eq(payments.transaction_id, transactionId));
+
+        console.log(`[Webhook MP] Successfully updated transaction ${transactionId} to status ${newStatus}`);
+    });
 }
 
 // Translates raw Mercado Pago status to our internal payment status domain
