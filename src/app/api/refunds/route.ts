@@ -3,8 +3,7 @@ import { db } from "@/db";
 import { users, payments, refunds } from "@/db/schema";
 import { eq, sql } from "drizzle-orm";
 import { getPaymentsUser } from "@/db/queries/users";
-
-// --- Types & Interfaces ---
+import { processRefundTransaction } from "@/services/refund.service";
 
 interface RefundPayload {
     trip_id: string;
@@ -38,7 +37,7 @@ export async function POST(req: NextRequest) {
         }
 
         // Business logic and state management 
-        const result = await executeSafeRefundProcess(user.userId, trip_id, refund_type, reason);
+        const result = await processRefundTransaction(user.userId, trip_id, refund_type, reason);   
 
         return NextResponse.json(result.body, { status: result.status });
 
