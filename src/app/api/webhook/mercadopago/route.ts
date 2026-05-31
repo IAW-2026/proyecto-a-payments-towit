@@ -31,32 +31,28 @@ export async function POST(req: NextRequest) {
         const url = new URL(req.url);
 
         // Anti noise filter to ignore legacy IPN calls that don't have the expected query parameters
-        if (url.searchParams.has("topic")) {
+        if (url.searchParams.has("topic")) 
             return createResponse("Ignored: Legacy IPN");
-        }
 
         const dataId = url.searchParams.get("data.id");
-        if (!dataId) {
+        if (!dataId) 
             return createResponse("Missing data.id", 400);
-        }
 
         // Cryptographic security check to ensure the request is genuinely from Mercado Pago
-        if (!authenticateWebhookSignature(req, dataId)) {
+        if (!authenticateWebhookSignature(req, dataId)) 
             return createResponse("Unauthorized", 403);
-        }
 
         // Payload validation to ensure we only process payment events
         const body = (await req.json()) as MercadoPagoWebhookPayload;
-        if (body.type !== "payment") {
+        if (body.type !== "payment")
             return createResponse("Ignored: Not a payment event", 200);
-        }
 
-        const result = await processMercadoPagoPayment(dataId);
+        const outcome = await processMercadoPagoPayment(dataId);
 
-        if (result && result.shouldNotify) {
+        if (outcome && outcome.shouldNotify) {
             await notifyClientTransactionStatus({
-                tripId: result.tripId!,
-                status: result.status!
+                tripId: outcome.tripId!,
+                status: outcome.status!
             });
         }
 
@@ -112,90 +108,133 @@ function authenticateWebhookSignature(req: NextRequest, dataId: string): boolean
 
 // Validates the payment with Mercado Pago API and updates the database accordingly
 async function processMercadoPagoPayment(mpPaymentId: string): Promise<PaymentOutcome | null> {
-    const paymentClient = new Payment(client);
-    let realPaymentData;
-    try {
-        realPaymentData = await paymentClient.get({ id: mpPaymentId });
-    } catch (error) {
-        console.warn(`[ESCUDO MP] Inexistent payment in MP: ${mpPaymentId}`);
-        return null; //Early return
-    }
+    const realPaymentData = await fetchMercadoPagoData(mpPaymentId);
+    if (!realPaymentData || !realPaymentData.external_reference || !realPaymentData.transaction_amount || !realPaymentData.status) 
+        return null;
 
     const transactionId = realPaymentData.external_reference;
-    if (!transactionId) {
-        console.warn(`[Webhook MP] Ignored payment: No external_reference. MP ID: ${mpPaymentId}`);
-        return null;
-    }
     const newStatus = mapMercadoPagoStatus(realPaymentData.status);
+    const amount = realPaymentData.transaction_amount;
 
     return await db.transaction(async (tx) => {
-        // Check payment in DB
-        const dbTransaction = await tx.select()
-            .from(payments)
-            .where(eq(payments.transaction_id, transactionId))
-            .limit(1)
-            .for('update')
-            .then(res => res[0]);
-        if (!dbTransaction) {
-            console.error(`[ALERTA MP] Inexistent transaction in DB: ${transactionId}`);
-            return null;
-        }
+        const dbPayment = await fetchPaymentForUpdate(tx, transactionId);
+        if (!dbPayment) return null;
 
-        // Verify amount to prevent tampering
-        if (Number(realPaymentData.transaction_amount) !== Number(dbTransaction.amount)) {
-            console.error(`[CRITICAL MP] Amount mismatch for transaction: ${transactionId}`);
-            return null;
-        }
+        if (!isAmountValid(amount, dbPayment.amount, transactionId)) return null;
 
-        
-        // Auto-refund logic for late payments on cancelled trips
-        if (dbTransaction.status === "CANCELLED" && newStatus === "COMPLETED") {
-            console.log(`[Webhook MP] Late payment detected for cancelled trip. Initiating auto-refund for transaction ${transactionId}`);
-            
-            await tx.update(payments)
-                .set({ external_id: mpPaymentId })
-                .where(eq(payments.transaction_id, transactionId));
-
-            const refundResult = await processRefundTransaction(
-                dbTransaction.id_user,
-                dbTransaction.trip_id,
-                "TOTAL",
-                "Auto-Refund: Acreditación tardía de Mercado Pago en viaje cancelado",
-                true,
-                tx, // Propagated transaction context 
-                dbTransaction // Pre-fetched payment record
-            );
-
-            if (refundResult.status !== 201) {
-                throw new Error(`Auto-refund falló con status ${refundResult.status}`);
-            }
-            return { shouldNotify: false };
-        }
-
-        // Idempotency check: If status and external_id already match, no update or notification needed
-        if (dbTransaction.status === newStatus && dbTransaction.external_id === mpPaymentId) {
-            return { shouldNotify: false };
-        }
-
-        await tx.update(payments)
-            .set({
-                status: newStatus,
-                external_id: mpPaymentId,
-                updated_at: new Date()
-            })
-            .where(eq(payments.transaction_id, transactionId));
-
-        console.log(`[Webhook MP] Successfully updated transaction ${transactionId} to status ${newStatus}`);
-
-        return {
-            shouldNotify: true,
-            tripId: dbTransaction.trip_id,
-            transactionId: transactionId,
-            status: newStatus,
-            amount: Number(dbTransaction.amount)
-        }; 
+        // 3. Delegamos a la Máquina de Estados
+        return await applyPaymentStateMachine(tx, dbPayment, newStatus, mpPaymentId);
     });
 }
+
+async function applyPaymentStateMachine(
+    tx: any, 
+    dbPayment: any, 
+    newStatus: InternalPaymentStatus, 
+    mpPaymentId: string
+): Promise<PaymentOutcome> {
+    
+    // Late payment scenario
+    if (dbPayment.status === "CANCELLED" && newStatus === "COMPLETED") {
+        return await executeAutoRefundAction(tx, dbPayment, mpPaymentId);
+    }
+
+    // Idempotency (without change)
+    if (dbPayment.status === newStatus && dbPayment.external_id === mpPaymentId) {
+        return { shouldNotify: false };
+    }
+
+    // Normal update flow
+    return await executeStandardUpdateAction(tx, dbPayment, newStatus, mpPaymentId);
+}
+
+
+async function executeAutoRefundAction(tx: any, dbPayment: any, mpPaymentId: string): Promise<PaymentOutcome> {
+    console.log(`[Webhook MP] Late payment detected. Initiating auto-refund for ${dbPayment.transaction_id}`);
+    
+    await tx.update(payments)
+        .set({ external_id: mpPaymentId })
+        .where(eq(payments.transaction_id, dbPayment.transaction_id));
+
+    const refundResult = await processRefundTransaction(
+        dbPayment.id_user,
+        dbPayment.trip_id,
+        "TOTAL",
+        "Auto-Refund: Acreditación tardía",
+        true,
+        tx, 
+        dbPayment 
+    );
+
+    if (refundResult.status !== 201) throw new Error(`Auto-refund falló con status ${refundResult.status}`);
+    
+    return { shouldNotify: false };
+}
+
+async function executeStandardUpdateAction(
+    tx: any, 
+    dbPayment: any, 
+    newStatus: InternalPaymentStatus, 
+    mpPaymentId: string
+): Promise<PaymentOutcome> {
+    
+    await tx.update(payments)
+        .set({
+            status: newStatus,
+            external_id: mpPaymentId,
+            updated_at: new Date()
+        })
+        .where(eq(payments.transaction_id, dbPayment.transaction_id));
+
+    console.log(`[Webhook MP] Successfully updated transaction ${dbPayment.transaction_id} to status ${newStatus}`);
+
+    return {
+        shouldNotify: true,
+        tripId: dbPayment.trip_id,
+        transactionId: dbPayment.transaction_id,
+        status: newStatus,
+        amount: Number(dbPayment.amount)
+    };
+}
+
+
+//Utility functions
+
+async function fetchMercadoPagoData(mpPaymentId: string) {
+    const paymentClient = new Payment(client);
+    try {
+        const data = await paymentClient.get({ id: mpPaymentId });
+        if (!data.external_reference) {
+            console.warn(`[Webhook MP] Ignored payment: No external_reference. MP ID: ${mpPaymentId}`);
+        }
+        return data;
+    } catch (error) {
+        console.warn(`[ESCUDO MP] Inexistent payment in MP: ${mpPaymentId}`);
+        return null;
+    }
+}
+
+async function fetchPaymentForUpdate(tx: any, transactionId: string) {
+    const record = await tx.select()
+        .from(payments)
+        .where(eq(payments.transaction_id, transactionId))
+        .limit(1)
+        .for('update')
+        .then((res: any[]) => res[0]);
+        
+    if (!record) console.error(`[ALERTA MP] Inexistent transaction in DB: ${transactionId}`);
+    return record;
+}
+
+function isAmountValid(mpAmount: number | string, dbAmount: number | string, transactionId: string): boolean {
+    if (Number(mpAmount) !== Number(dbAmount)) {
+        console.error(`[CRITICAL MP] Amount mismatch for transaction: ${transactionId}`);
+        return false;
+    }
+    return true;
+}
+
+
 
 // Translates raw Mercado Pago status to our internal payment status domain
 function mapMercadoPagoStatus(mpStatus: string | undefined): InternalPaymentStatus {
