@@ -6,6 +6,7 @@ import { ReadCookieUserInformation } from "@/app/lib/auth";
 import { TransactionStatus } from "@/types/transaction";
 import TransactionDetailsCard from "@/components/TransactionDetailsCard";
 import Link from "next/link";
+import { notFound } from "next/navigation";
 
 interface PageProps {
     params: Promise<{ tripId: string }>;
@@ -14,11 +15,9 @@ interface PageProps {
 export default async function RefundDetailPage({ params }: PageProps) {
     const { tripId } = await params;
 
-    // 1. Autenticación y obtención del usuario interno
     const internalUser = await ReadCookieUserInformation(`/refunds/${tripId}`);
     if (!internalUser) throw new Error("Error obteniendo el usuario interno");
 
-    // 2. Consulta a la tabla de reembolsos (Refunds)
     const refundData = await db.query.refunds.findFirst({
         where: and(
             eq(refunds.trip_id, tripId),
@@ -27,13 +26,7 @@ export default async function RefundDetailPage({ params }: PageProps) {
     });
 
     if (!refundData) {
-        return (
-            <div className="min-h-screen flex items-center justify-center bg-slate-50">
-                <p className="text-xl text-slate-600 font-semibold">
-                    No se encontró un proceso de reembolso para este viaje.
-                </p>
-            </div>
-        );
+        notFound();
     }
 
     return (
