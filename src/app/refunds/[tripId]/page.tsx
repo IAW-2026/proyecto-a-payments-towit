@@ -1,7 +1,7 @@
 // src/app/refunds/[tripId]/page.tsx
 import { db } from "@/db";
 import { refunds } from "@/db/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, isNull } from "drizzle-orm";
 import { ReadCookieUserInformation } from "@/app/lib/auth";
 import { TransactionStatus } from "@/types/transaction";
 import TransactionDetailsCard from "@/components/TransactionDetailsCard";
@@ -21,7 +21,8 @@ export default async function RefundDetailPage({ params }: PageProps) {
     const refundData = await db.query.refunds.findFirst({
         where: and(
             eq(refunds.trip_id, tripId),
-            eq(refunds.id_user, internalUser.id_user)
+            eq(refunds.id_user, internalUser.id_user),
+            isNull(refunds.deleted_at),
         ),
     });
 

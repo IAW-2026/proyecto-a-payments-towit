@@ -1,7 +1,7 @@
 // src/app/disbursements/[tripId]/page.tsx
 import { db } from "@/db";
 import { disbursements } from "@/db/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, isNull } from "drizzle-orm";
 import { ReadCookieUserInformation } from "@/app/lib/auth";
 import { TransactionStatus } from "@/types/transaction";
 import TransactionDetailsCard from "@/components/TransactionDetailsCard";
@@ -21,7 +21,8 @@ export default async function DisbursementDetailPage({ params }: PageProps) {
     const disbursementData = await db.query.disbursements.findFirst({
         where: and(
             eq(disbursements.trip_id, tripId),
-            eq(disbursements.id_user, internalUser.id_user)
+            eq(disbursements.id_user, internalUser.id_user),
+            isNull(disbursements.deleted_at),
         ),
     });
 
