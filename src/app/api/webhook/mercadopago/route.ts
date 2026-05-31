@@ -6,6 +6,7 @@ import { Payment } from "mercadopago";
 import { client } from "@/app/lib/mercadoPago";
 import crypto from "crypto";
 import { processRefundTransaction } from "@/services/refund.service";
+import { notifyClientTransactionStatus } from "@/services/client-system-api.service";
 
 interface MercadoPagoWebhookPayload {
     id: number;
@@ -13,6 +14,14 @@ interface MercadoPagoWebhookPayload {
     type: string;
     action: string;
     data: { id: string };
+}
+
+interface PaymentOutcome {
+    shouldNotify: boolean;
+    tripId?: string;
+    transactionId?: string;
+    status?: InternalPaymentStatus;
+    amount?: number;
 }
 
 type InternalPaymentStatus = "PENDING" | "COMPLETED" | "FAILED" | "REFUNDED";
@@ -42,7 +51,14 @@ export async function POST(req: NextRequest) {
             return createResponse("Ignored: Not a payment event", 200);
         }
 
-        await processMercadoPagoPayment(dataId);
+        const result = await processMercadoPagoPayment(dataId);
+
+        if (result && result.shouldNotify) {
+            await notifyClientTransactionStatus({
+                tripId: result.tripId!,
+                status: result.status!
+            });
+        }
 
         return createResponse("Webhook processed successfully");
 
@@ -95,24 +111,24 @@ function authenticateWebhookSignature(req: NextRequest, dataId: string): boolean
 }
 
 // Validates the payment with Mercado Pago API and updates the database accordingly
-async function processMercadoPagoPayment(mpPaymentId: string): Promise<void> {
+async function processMercadoPagoPayment(mpPaymentId: string): Promise<PaymentOutcome | null> {
     const paymentClient = new Payment(client);
     let realPaymentData;
     try {
         realPaymentData = await paymentClient.get({ id: mpPaymentId });
     } catch (error) {
         console.warn(`[ESCUDO MP] Inexistent payment in MP: ${mpPaymentId}`);
-        return; //Early return
+        return null; //Early return
     }
 
     const transactionId = realPaymentData.external_reference;
     if (!transactionId) {
         console.warn(`[Webhook MP] Ignored payment: No external_reference. MP ID: ${mpPaymentId}`);
-        return;
+        return null;
     }
     const newStatus = mapMercadoPagoStatus(realPaymentData.status);
 
-    await db.transaction(async (tx) => {
+    return await db.transaction(async (tx) => {
         // Check payment in DB
         const dbTransaction = await tx.select()
             .from(payments)
@@ -122,13 +138,13 @@ async function processMercadoPagoPayment(mpPaymentId: string): Promise<void> {
             .then(res => res[0]);
         if (!dbTransaction) {
             console.error(`[ALERTA MP] Inexistent transaction in DB: ${transactionId}`);
-            return;
+            return null;
         }
 
         // Verify amount to prevent tampering
         if (Number(realPaymentData.transaction_amount) !== Number(dbTransaction.amount)) {
             console.error(`[CRITICAL MP] Amount mismatch for transaction: ${transactionId}`);
-            return;
+            return null;
         }
 
         
@@ -140,7 +156,6 @@ async function processMercadoPagoPayment(mpPaymentId: string): Promise<void> {
                 .set({ external_id: mpPaymentId })
                 .where(eq(payments.transaction_id, transactionId));
 
-            // PASAMOS LA TRANSACCIÓN (tx) AL SERVICIO PARA EVITAR DEADLOCKS
             const refundResult = await processRefundTransaction(
                 dbTransaction.id_user,
                 dbTransaction.trip_id,
@@ -154,12 +169,12 @@ async function processMercadoPagoPayment(mpPaymentId: string): Promise<void> {
             if (refundResult.status !== 201) {
                 throw new Error(`Auto-refund falló con status ${refundResult.status}`);
             }
-            return;
+            return { shouldNotify: false };
         }
 
-        // 3. LÓGICA NORMAL: Actualización de estado
+        // Idempotency check: If status and external_id already match, no update or notification needed
         if (dbTransaction.status === newStatus && dbTransaction.external_id === mpPaymentId) {
-            return;
+            return { shouldNotify: false };
         }
 
         await tx.update(payments)
@@ -171,6 +186,14 @@ async function processMercadoPagoPayment(mpPaymentId: string): Promise<void> {
             .where(eq(payments.transaction_id, transactionId));
 
         console.log(`[Webhook MP] Successfully updated transaction ${transactionId} to status ${newStatus}`);
+
+        return {
+            shouldNotify: true,
+            tripId: dbTransaction.trip_id,
+            transactionId: transactionId,
+            status: newStatus,
+            amount: Number(dbTransaction.amount)
+        }; 
     });
 }
 
@@ -178,7 +201,7 @@ async function processMercadoPagoPayment(mpPaymentId: string): Promise<void> {
 function mapMercadoPagoStatus(mpStatus: string | undefined): InternalPaymentStatus {
     switch (mpStatus) {
         case "approved": return "COMPLETED";
-        case "rejected":
+        case "rejected": return "FAILED";
         case "cancelled": return "FAILED";
         case "refunded": return "REFUNDED";
         default: return "PENDING";
