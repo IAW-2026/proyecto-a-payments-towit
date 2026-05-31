@@ -1,6 +1,6 @@
 import { db } from "@/db";
 import { users, payments, refunds } from "@/db/schema";
-import { eq, sql } from "drizzle-orm";
+import { and, eq, isNull, sql } from "drizzle-orm";
 
 interface TransactionResult {
     status: number;
@@ -24,7 +24,7 @@ export async function processRefundTransaction(
         if (!paymentRecord) {
             const [fetched] = await tx.select()
                 .from(payments)
-                .where(eq(payments.trip_id, tripId))
+                .where(and(eq(payments.trip_id, tripId), isNull(payments.deleted_at)))
                 .for('update');
             paymentRecord = fetched;
         }
@@ -46,7 +46,7 @@ export async function processRefundTransaction(
         if (isValidStatus) {
             const [existingRefund] = await tx.select()
                 .from(refunds)
-                .where(eq(refunds.trip_id, tripId));
+                .where(and(eq(refunds.trip_id, tripId), isNull(refunds.deleted_at)));
 
             if (existingRefund) {
                 return { status: 409, body: { error: "Refund already processed for this trip." } };
@@ -58,7 +58,8 @@ export async function processRefundTransaction(
                 amount: paymentRecord.amount, 
                 refund_type: refundType,
                 external_id: null,
-                status: "COMPLETED"
+                status: "COMPLETED",
+                deleted_at: null
             });
 
             await tx.update(users)
@@ -66,7 +67,7 @@ export async function processRefundTransaction(
                 .where(eq(users.id_user, userId));
             
             await tx.update(payments)
-                .set({ status: "REFUNDED", updated_at: new Date() })
+                .set({ status: "REFUNDED", updated_at: new Date()})
                 .where(eq(payments.transaction_id, paymentRecord.transaction_id));
 
             return { status: 201, body: { message: "Refund processed successfully. Balance credited." } };

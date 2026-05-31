@@ -2,7 +2,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { users, payments, disbursements } from "@/db/schema";
-import { eq, and, sql } from "drizzle-orm";
+import { eq, and, sql, isNull } from "drizzle-orm";
 import { TransactionStatus } from "@/types/transaction";
 import { getPaymentsUser } from "@/db/queries/users";
 
@@ -48,7 +48,7 @@ async function executeDisbursementTransaction(
         return await db.transaction(async (tx) => {            
             const [paymentRecord] = await tx.select()
                 .from(payments)
-                .where(eq(payments.trip_id, tripId))
+                .where(and(eq(payments.trip_id, tripId), isNull(payments.deleted_at)))
                 .for('update'); 
 
             if (!paymentRecord) {
@@ -70,6 +70,7 @@ async function executeDisbursementTransaction(
                 platform_fee: platformFee.toFixed(2),
                 payment_alias: "billetera.interna.towit", 
                 status: "COMPLETED",
+                deleted_at: null,
             });
 
             await tx.update(users)
@@ -82,9 +83,10 @@ async function executeDisbursementTransaction(
             await tx.update(payments)
                 .set({ 
                     status: "DISBURSED", // Actualizamos a nuestro nuevo estado terminal
-                    updated_at: new Date()
+                    updated_at: new Date(),
+                    deleted_at: null
                 })
-                .where(eq(payments.trip_id, tripId));
+                .where(and(eq(payments.trip_id, tripId), isNull(payments.deleted_at)));
 
 
             return { status: 201, body: { message: "Disbursement successful" } };

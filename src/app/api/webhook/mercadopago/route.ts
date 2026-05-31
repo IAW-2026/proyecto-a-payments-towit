@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { payments } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { Payment } from "mercadopago";
 import { client } from "@/app/lib/mercadoPago";
 import crypto from "crypto";
@@ -213,7 +213,7 @@ async function executeSilentLinkAction(tx: any, dbPayment: any, mpPaymentId: str
 
     console.log(`[Webhook MP] Vinculación silenciosa: external_id ${mpPaymentId} enlazado a la transacción ${dbPayment.transaction_id} (Estado retenido en ${dbPayment.status})`);
 
-    // Retornamos falso para que el controlador no haga spam de red al Core System
+    // Return this to not notify the client system
     return { shouldNotify: false };
 }
 
@@ -236,7 +236,7 @@ async function fetchMercadoPagoData(mpPaymentId: string) {
 async function fetchPaymentForUpdate(tx: any, transactionId: string) {
     const record = await tx.select()
         .from(payments)
-        .where(eq(payments.transaction_id, transactionId))
+        .where(and(eq(payments.transaction_id, transactionId), isNull(payments.deleted_at)))
         .limit(1)
         .for('update')
         .then((res: any[]) => res[0]);

@@ -94,6 +94,7 @@ async function executePaymentInsertion(tripId: string, clerkId: string, amount: 
         amount: amount.toString(),
         status: "PENDING",
         external_id: null,
+        deleted_at: null,
     }).onConflictDoNothing({ target: payments.trip_id })
     .returning({
         transactionId: payments.transaction_id,
