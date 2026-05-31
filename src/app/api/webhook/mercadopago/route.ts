@@ -144,6 +144,11 @@ async function applyPaymentStateMachine(
         return { shouldNotify: false };
     }
 
+    // Silent update scenario: status is the same but external_id has changed (e.g. MP reprocessed the payment and assigned a new ID)
+    if (dbPayment.status === newStatus && dbPayment.external_id !== mpPaymentId) {
+        return await executeSilentLinkAction(tx, dbPayment, mpPaymentId);
+    }
+
     // Normal update flow
     return await executeStandardUpdateAction(tx, dbPayment, newStatus, mpPaymentId);
 }
@@ -197,6 +202,20 @@ async function executeStandardUpdateAction(
     };
 }
 
+async function executeSilentLinkAction(tx: any, dbPayment: any, mpPaymentId: string): Promise<PaymentOutcome> {
+    
+    await tx.update(payments)
+        .set({
+            external_id: mpPaymentId,
+            updated_at: new Date()
+        })
+        .where(eq(payments.transaction_id, dbPayment.transaction_id));
+
+    console.log(`[Webhook MP] Vinculación silenciosa: external_id ${mpPaymentId} enlazado a la transacción ${dbPayment.transaction_id} (Estado retenido en ${dbPayment.status})`);
+
+    // Retornamos falso para que el controlador no haga spam de red al Core System
+    return { shouldNotify: false };
+}
 
 //Utility functions
 

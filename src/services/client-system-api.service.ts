@@ -11,7 +11,8 @@ export async function notifyClientTransactionStatus(payload: ClientWebhookPayloa
     if (!CLIENT_SYSTEM_API_URL) {
         // MOCK MODE 
         await new Promise(resolve => setTimeout(resolve, 300));
-        
+        console.log(`[MOCK CLIENT SYSTEM API] Payload:`, payload);
+
         return true;
     }
 
@@ -29,6 +30,8 @@ export async function notifyClientTransactionStatus(payload: ClientWebhookPayloa
             console.error(`[CLIENT SYSTEM API ERROR] Status: ${response.status}`);
             return false;
         }
+
+        console.log(`[CLIENT SYSTEM API] Successfully notified Client System for trip ${payload.tripId} with status ${payload.status}`);
 
         return true;
     } catch (error) {
