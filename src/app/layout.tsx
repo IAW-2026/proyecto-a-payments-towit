@@ -30,7 +30,8 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <ClerkProvider>
-        <body className="min-h-full flex flex-col bg-gray-50">
+        {/* Agregamos overflow-x-hidden como protección global anti-scroll horizontal */}
+        <body className="min-h-full flex flex-col bg-gray-50 overflow-x-hidden">
           <Header />
           <main className="flex-1 bg-white">{children}</main>
         </body>

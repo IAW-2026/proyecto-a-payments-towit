@@ -1,3 +1,4 @@
+import AdminBackButton from "@/components/admin/AdminBackButton";
 import { auth } from "@clerk/nextjs/server";
 import { notFound } from "next/navigation";
 
@@ -14,6 +15,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         <div className="min-h-screen bg-slate-50">
             <main>
                 {children}
+                <AdminBackButton />
             </main>
         </div>
     );
