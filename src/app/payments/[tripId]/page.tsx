@@ -3,7 +3,7 @@ import { auth } from "@clerk/nextjs/server";
 import { notFound, redirect } from "next/navigation";
 import { db } from "@/db";
 import { payments } from "@/db/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, isNull } from "drizzle-orm";
 import { MercadoPagoConfig, Preference } from "mercadopago";
 import { client } from "@/app/lib/mercadoPago";
 import { ReadCookieUserInformation } from "@/app/lib/auth";
@@ -27,7 +27,8 @@ export default async function TripPaymentPage({ params }: PageProps) {
     const payment = await db.query.payments.findFirst({
         where: and(
             eq(payments.trip_id, tripId),
-            eq(payments.id_user, internalUser.id_user)
+            eq(payments.id_user, internalUser.id_user),
+            isNull(payments.deleted_at)
         ),
     });
 

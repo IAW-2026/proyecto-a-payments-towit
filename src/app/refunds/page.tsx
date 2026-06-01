@@ -2,7 +2,7 @@ import React from "react";
 import Link from "next/link";
 import { db } from "@/db";
 import { refunds } from "@/db/schema";
-import { desc, eq } from "drizzle-orm";
+import { and, isNull, eq, desc } from "drizzle-orm";
 import { ReadCookieUserInformation } from "@/app/lib/auth";
 import TransactionCard from "@/components/TransactionCard";
 
@@ -28,7 +28,7 @@ export default async function RefundsPage({ searchParams }: DashboardProps) {
 
   // 3. Consultamos a Neon trayendo 5 elementos + 1 extra para verificar si hay una página siguiente
   const userRefunds = await db.query.refunds.findMany({
-    where: eq(refunds.id_user, paymentsUser.id_user),
+    where: and(eq(refunds.id_user, paymentsUser.id_user), isNull(refunds.deleted_at)),
     orderBy: [desc(refunds.created_at)],
     limit: ITEMS_PER_PAGE + 1, 
     offset: offset,
