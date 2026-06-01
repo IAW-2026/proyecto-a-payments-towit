@@ -111,7 +111,6 @@ export default function TransactionDetailsCard(data: TransactionDetailProps) {
                     <h3 className="text-sm font-bold text-slate-900 mb-3 border-b border-slate-100 pb-2">Información General</h3>
                     <DetailRow label="ID Transacción (Interno)" value={data.transaction_id} isMonospace />
                     <DetailRow label="Viaje (Trip ID)" value={data.trip_id} isMonospace />
-                    <DetailRow label="ID Pasarela (Mercado Pago)" value={data.external_id || "No registrado"} isMonospace />
                     <DetailRow label="Fecha de Creación" value={formatDate(data.created_at)} />
                 </div>
 
@@ -122,13 +121,13 @@ export default function TransactionDetailsCard(data: TransactionDetailProps) {
                     {data.type === "PAYMENT" && (
                         <>
                             <DetailRow label="Última Actualización" value={formatDate(data.updated_at)} />
+                            <DetailRow label="ID Pasarela (Mercado Pago)" value={data.external_id || "No registrado"} isMonospace />
                             {data.expiration_date && <DetailRow label="Fecha de Expiración" value={formatDate(data.expiration_date)} />}
                         </>
                     )}
 
                     {data.type === "DISBURSEMENT" && (
                         <>
-                            <DetailRow label="CBU / Alias de Destino" value={data.payment_alias} isMonospace />
                             <DetailRow label="Comisión de Plataforma" value={formatCurrency(data.platform_fee)} />
                         </>
                     )}
@@ -136,7 +135,6 @@ export default function TransactionDetailsCard(data: TransactionDetailProps) {
                     {data.type === "REFUND" && (
                         <>
                             <DetailRow label="Tipo de Reintegro" value={data.refund_type === "TOTAL" ? "Devolución Total" : "Devolución Parcial"} />
-                            {data.reason && <DetailRow label="Motivo del Reintegro" value={data.reason} />}
                         </>
                     )}
                 </div>

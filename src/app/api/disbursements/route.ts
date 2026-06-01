@@ -68,7 +68,6 @@ async function executeDisbursementTransaction(
                 id_user: driver.userId,
                 amount: netAmount.toFixed(2),
                 platform_fee: platformFee.toFixed(2),
-                payment_alias: "billetera.interna.towit", 
                 status: "COMPLETED",
                 deleted_at: null,
             });

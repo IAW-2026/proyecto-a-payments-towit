@@ -7,6 +7,7 @@ export type ColumnDef<T> = {
   header: string;
   accessorKey?: keyof T;
   cell?: (row: T) => React.ReactNode;
+  hiddenOnMobile?: boolean; 
 };
 
 export type ActionDef = {
@@ -108,7 +109,12 @@ function DataTable<T>({ data, columns, keyExtractor, selectedId, onSelectRow }:
             <tr>
               <th scope="col" className="px-6 py-4 w-12 text-center">Sel</th>
               {columns.map((col, idx) => (
-                <th key={idx} scope="col" className="px-6 py-4">{col.header}</th>
+                <th 
+                  key={idx} 
+                  scope="col" 
+                  className={`px-6 py-4 ${col.hiddenOnMobile ? 'hidden md:table-cell' : ''}`}>
+                    {col.header}
+                </th>
               ))}
             </tr>
           </thead>
@@ -141,8 +147,11 @@ function DataTable<T>({ data, columns, keyExtractor, selectedId, onSelectRow }:
                     </td>
                     {/* Celdas de datos */}
                     {columns.map((col, idx) => (
-                      <td key={idx} className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
-                        {col.cell ? col.cell(row) : String(row[col.accessorKey as keyof T])}
+                      <td 
+                        key={idx} 
+                        className={`px-6 py-4 whitespace-nowrap text-sm text-gray-700 ${col.hiddenOnMobile ? 'hidden md:table-cell' : ''}`}
+                      >
+                        {col.cell ? col.cell(row) : String(row[col.accessorKey as keyof T] ?? '')}
                       </td>
                     ))}
                   </tr>

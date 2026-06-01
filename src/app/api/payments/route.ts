@@ -88,21 +88,30 @@ async function executePaymentInsertion(tripId: string, clerkId: string, amount: 
         throw new Error(`El usuario de Clerk ${clerkId} no existe en la base de datos local.`);
     }
     
-    const result = await db.insert(payments).values({
-        trip_id: tripId,
-        id_user: user.userId,
-        amount: amount.toString(),
-        status: "PENDING",
-        external_id: null,
-        deleted_at: null,
-    }).onConflictDoNothing({ target: payments.trip_id })
-    .returning({
-        transactionId: payments.transaction_id,
-    });
+    try {
+        const result = await db.insert(payments).values({
+            trip_id: tripId,
+            id_user: user.userId,
+            amount: amount.toString(),
+            status: "PENDING",
+            external_id: null,
+            deleted_at: null,
+        }).returning({
+            transactionId: payments.transaction_id,
+        });
 
-    if (result.length === 0) {
-        return null; 
+        if (result.length === 0) {
+            return null; 
+        }
+
+        return result[0].transactionId;
+
+    } catch (error: any) {
+        if (error.code === '23505') {
+            console.warn(`[DB] Intento de pago duplicado interceptado para el viaje: ${tripId}`);
+            return null;
+        }
+        
+        throw error;
     }
-
-    return result[0].transactionId;
 }

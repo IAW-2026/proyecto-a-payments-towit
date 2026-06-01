@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
         }
 
         // Business logic and state management 
-        const result = await processRefundTransaction(user.userId, trip_id, refund_type, reason);   
+        const result = await processRefundTransaction(user.userId, trip_id, refund_type);   
 
         return NextResponse.json(result.body, { status: result.status });
 

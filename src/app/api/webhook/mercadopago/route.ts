@@ -165,7 +165,6 @@ async function executeAutoRefundAction(tx: any, dbPayment: any, mpPaymentId: str
         dbPayment.id_user,
         dbPayment.trip_id,
         "TOTAL",
-        "Auto-Refund: Acreditación tardía",
         true,
         tx, 
         dbPayment 
