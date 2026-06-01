@@ -83,3 +83,37 @@ export async function processRefundTransaction(
         return await db.transaction(executeLogic);
     }
 }
+
+export async function cancelRefundSafely(transactionId: string) {
+  try {
+    return await db.transaction(async (tx) => {
+      const records = await tx.select()
+        .from(refunds)
+        .where(and(eq(refunds.transaction_id, transactionId), isNull(refunds.deleted_at)))
+        .limit(1)
+        .for('update');
+
+      const record = records[0];
+
+      if (!record) {
+        return { success: false, message: "Refund not found or already cancelled." };
+      }
+
+      // If the refund was already completed, reverse the balance change
+      if (record.status === "COMPLETED") {
+        await tx.update(users)
+          .set({ balance: sql`${users.balance} - ${record.amount}` })
+          .where(eq(users.id_user, record.id_user));
+      }
+
+      await tx.update(refunds)
+        .set({ deleted_at: new Date(), status: 'CANCELLED' })
+        .where(eq(refunds.transaction_id, transactionId));
+
+      return { success: true, message: "Refund cancelled successfully." };
+    });
+  } catch (error) {
+    console.error(`[Service Error] Failed to cancel refund ${transactionId}:`, error);
+    return { success: false, message: "Internal error in the database while cancelling the refund." };
+  }
+}

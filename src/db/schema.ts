@@ -44,7 +44,6 @@ export const disbursements = pgTable('disbursements', {
     created_at: timestamp('created_at').defaultNow().notNull(),
     deleted_at: timestamp('deleted_at'),
 }, (table) => ({
-    // 👇 Índice parcial: Único solo cuando no está borrado
     uniqueActiveDisbursement: uniqueIndex('unique_active_trip_disbursement')
         .on(table.trip_id)
         .where(sql`${table.deleted_at} IS NULL`),
@@ -63,7 +62,6 @@ export const refunds = pgTable('refunds', {
     created_at: timestamp('created_at').defaultNow().notNull(),
     deleted_at: timestamp('deleted_at'),
 }, (table) => ({
-    // 👇 Índice parcial: Único solo cuando no está borrado
     uniqueActiveRefund: uniqueIndex('unique_active_trip_refund')
         .on(table.trip_id)
         .where(sql`${table.deleted_at} IS NULL`),
