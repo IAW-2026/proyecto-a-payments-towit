@@ -6,10 +6,9 @@ import { getPaymentsUser } from "@/db/queries/users";
 import { processRefundTransaction } from "@/services/refund.service";
 
 interface RefundPayload {
-    trip_id: string;
-    clerk_id: string;
-    reason: string;
-    refund_type: "TOTAL" | "PARTIAL";
+    tripId: string;
+    clerkId: string;
+    refundType: "TOTAL" | "PARTIAL";
 }
 
 interface TransactionResult {
@@ -28,16 +27,16 @@ export async function POST(req: NextRequest) {
         const body = await req.json();
         const payloadError = validateRefundPayload(body);
         if (payloadError) return payloadError;
-        const { trip_id, clerk_id, reason, refund_type } = body as RefundPayload;
+        const { tripId, clerkId, refundType } = body as RefundPayload;
 
 
-        const user = await getPaymentsUser(clerk_id);
+        const user = await getPaymentsUser(clerkId);
         if (!user) {
             return NextResponse.json({ error: "User not found." }, { status: 404 });
         }
 
         // Business logic and state management 
-        const result = await processRefundTransaction(user.userId, trip_id, refund_type);   
+        const result = await processRefundTransaction(user.userId, tripId, refundType);   
 
         return NextResponse.json(result.body, { status: result.status });
 
@@ -64,25 +63,18 @@ function requestAuthorization(req: NextRequest): NextResponse | null {
 }
 
 function validateRefundPayload(payload: Partial<RefundPayload>): NextResponse | null {
-    const { trip_id, clerk_id, reason, refund_type } = payload;
+    const { tripId, clerkId, refundType } = payload;
 
-    if (!trip_id || typeof trip_id !== "string" || !clerk_id || typeof clerk_id !== "string") {
+    if (!tripId || typeof tripId !== "string" || !clerkId || typeof clerkId !== "string") {
         return NextResponse.json(
-            { error: "Invalid payload. 'trip_id' and 'clerk_id' must be provided as strings." },
+            { error: "Invalid payload. 'tripId' and 'clerkId' must be provided as strings." },
             { status: 400 }
         );
     }
 
-    if (!refund_type || !["TOTAL", "PARTIAL"].includes(refund_type)) {
+    if (!refundType || !["TOTAL", "PARTIAL"].includes(refundType)) {
         return NextResponse.json(
-            { error: "Invalid payload. 'refund_type' must be 'TOTAL' or 'PARTIAL'." },
-            { status: 400 }
-        );
-    }
-
-    if (!reason || typeof reason !== "string") {
-        return NextResponse.json(
-            { error: "Invalid payload. 'reason' is required." },
+            { error: "Invalid payload. 'refundType' must be 'TOTAL' or 'PARTIAL'." },
             { status: 400 }
         );
     }
