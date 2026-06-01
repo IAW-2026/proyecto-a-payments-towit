@@ -108,7 +108,45 @@ async function PrivateDashboardSection() {
 					</div>
 				</Link>
 
-                {/* Los otros enlaces se mantienen igual... (Disbursements, Refunds) */}
+				{/* Enlace a Liquidaciones */}
+				<Link href="/disbursements" className="group block w-full focus:outline-none">
+					<div className="bg-white rounded-2xl border border-slate-200 p-5 flex items-center justify-between shadow-sm transition-all duration-200 hover:border-purple-200 hover:shadow-md active:scale-[0.99]">
+						<div className="flex items-center gap-4">
+							<div className="w-10 h-10 rounded-xl bg-purple-50 flex items-center justify-center text-purple-600 group-hover:bg-purple-600 group-hover:text-white transition-colors">
+								<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+									<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+								</svg>
+							</div>
+							<div>
+								<h3 className="font-bold text-slate-900 text-base">Módulo de Liquidaciones</h3>
+								<p className="text-xs text-slate-500">Monitoreo de transferencias enviadas a conductores</p>
+							</div>
+						</div>
+						<svg className="w-5 h-5 text-slate-400 transform group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+							<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+						</svg>
+					</div>
+				</Link>
+
+				{/* Enlace a Reembolsos */}
+				<Link href="/refunds" className="group block w-full focus:outline-none">
+					<div className="bg-white rounded-2xl border border-slate-200 p-5 flex items-center justify-between shadow-sm transition-all duration-200 hover:border-orange-200 hover:shadow-md active:scale-[0.99]">
+						<div className="flex items-center gap-4">
+							<div className="w-10 h-10 rounded-xl bg-orange-50 flex items-center justify-center text-orange-600 group-hover:bg-orange-500 group-hover:text-white transition-colors">
+								<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+									<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 15v-3a4 4 0 00-4-4H8m0 0l3 3m-3-3l3-3m9 14V5a2 2 0 00-2-2H6a2 2 0 00-2 2v16l4-2 4 2 4-2 4 2z" />
+								</svg>
+							</div>
+							<div>
+								<h3 className="font-bold text-slate-900 text-base">Módulo de Reembolsos</h3>
+								<p className="text-xs text-slate-500">Historial y estado de devoluciones a clientes</p>
+							</div>
+						</div>
+						<svg className="w-5 h-5 text-slate-400 transform group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+							<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+						</svg>
+					</div>
+				</Link>
 			</div>
 		</section>
 	);
