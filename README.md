@@ -7,7 +7,7 @@ Deploy de producción:  https://payments-towit-six.vercel.app
 
 ## Instrucciones
 -Para generar una orden de pago se tiene que hacer un POST a "https://payments-towit-six.vercel.app/payments/", con el header Authorization (con la API key) y el body {"tripId": string, "clerkId": string, "amount": number}. 
--Para generar un reembolso/cancelación se tiene que hacer un POST a "https://payments-towit-six.vercel.app/refunds/", con el header Authorization (con la API key) y el body {"trip_id": string, "clerk_id": string, "refund_type": string}
+-Para generar un reembolso/cancelación se tiene que hacer un POST a "https://payments-towit-six.vercel.app/refunds/", con el header Authorization (con la API key) y el body {"tripId": string, "clerkId": string, "refundType": string}
 -Para generar un desembolso se tiene que hacer un POST a "https://payments-towit-six.vercel.app/disbursements/", con el header Authorization (con la API key) y el body {"tripId": string, "clerk_id": string, "feePercentage": number}
 -Para completar un pago con MercadoPago se tiene que usar la cuenta de prueba "TESTUSER2137522699836841910" con la contraseña "48gAECJIAG" (codigo de verificación 113372). Se tiene que pagar con la siguiente tarjeta de prueba: <5031 7557 3453 0604, 11/30, 123>. El nombre tiene que ser "APRO" para que el pago salga como aprobado.
 
