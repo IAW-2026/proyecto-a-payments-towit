@@ -21,14 +21,12 @@ export default async function AdminPaymentsPage(props: PageProps) {
 	const [paginatedPayments, [{ totalCount }]] = await Promise.all([
 		db.select()
 		.from(payments)
-		.where(isNull(payments.deleted_at))
 		.orderBy(desc(payments.created_at))
 		.limit(limit)
 		.offset(offset),
 		
 		db.select({ totalCount: sql<number>`count(*)` })
 		.from(payments)
-		.where(isNull(payments.deleted_at))
  	 ]);
 
 	const totalPages = Math.ceil(Number(totalCount) / limit);

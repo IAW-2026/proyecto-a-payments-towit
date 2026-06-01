@@ -12,8 +12,7 @@ export default function RefundsClient({ data }: RefundsClientProps) {
   const columns: ColumnDef<any>[] = [
     { header: "ID Ref.", cell: (row) => <span className="font-mono text-xs text-gray-500">{row.transaction_id.split('-')[0]}...</span> },
     { header: "Viaje", accessorKey: "trip_id" },
-    { header: "Tipo", cell: (row) => <span className="font-medium text-purple-700">{row.refund_type}</span> },
-    { header: "Motivo", accessorKey: "reason" },
+    { header: "Tipo", cell: (row) => <span className="font-medium text-purple-700">{row.refund_type}</span>, hiddenOnMobile: true },
     { header: "Monto", cell: (row) => <span className="font-semibold text-gray-900">${Number(row.amount).toFixed(2)}</span> },
     { header: "Estado", cell: (row) => (
         <span className={`px-2.5 py-1 text-xs font-medium rounded-full ${row.status === 'COMPLETED' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
@@ -33,7 +32,17 @@ export default function RefundsClient({ data }: RefundsClientProps) {
           })}
         </time> 
       )
-    }
+    },
+    { 
+      header: "Borrado en", 
+      cell: (row) => (
+        row.deleted_at ? (
+          <time suppressHydrationWarning className="text-red-500 font-medium">
+            {new Date(row.deleted_at).toLocaleString(undefined, { day: '2-digit', month: 'short' })}
+          </time> 
+        ) : <span className="text-gray-300">-</span>
+      ),
+    },
   ];
 
   const actions: ActionDef[] = [

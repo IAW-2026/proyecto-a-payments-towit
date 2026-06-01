@@ -17,7 +17,15 @@ export default function PaymentsClient({ data }: PaymentsClientProps) {
       header: "ID Transacción", 
       cell: (row) => <span className="font-mono text-xs text-gray-500">{row.transaction_id.split('-')[0]}...</span> 
     },
-    { header: "Viaje (Trip ID)", accessorKey: "trip_id" },
+    { header: "Viaje (Trip ID)", 
+      accessorKey: "trip_id",
+      hiddenOnMobile: true
+    },
+    { 
+      header: "Usuario ID", 
+      accessorKey: "id_user", 
+      hiddenOnMobile: true 
+    },
     { 
       header: "Monto", 
       cell: (row) => <span className="font-semibold text-gray-900">${Number(row.amount).toFixed(2)}</span> 
@@ -31,6 +39,15 @@ export default function PaymentsClient({ data }: PaymentsClientProps) {
       )
     },
     { 
+      header: "ID Externo", 
+      cell: (row) => (
+        <span className="font-mono text-xs text-gray-400">
+          {row.external_id ? row.external_id : 'N/A'}
+        </span>
+      ),
+      hiddenOnMobile: true 
+    },
+    { 
       header: "Fecha", 
       cell: (row) => (
         <time suppressHydrationWarning className="text-gray-500">
@@ -42,7 +59,18 @@ export default function PaymentsClient({ data }: PaymentsClientProps) {
           })}
         </time> 
       )
-    }
+    },
+    { 
+      header: "Borrado en", 
+      cell: (row) => (
+        row.deleted_at ? (
+          <time suppressHydrationWarning className="text-red-500 font-medium">
+            {new Date(row.deleted_at).toLocaleString(undefined, { day: '2-digit', month: 'short' })}
+          </time> 
+        ) : <span className="text-gray-300">-</span>
+      ),
+      hiddenOnMobile: true 
+    },
   ];
 
   const actions: ActionDef[] = [
@@ -59,7 +87,6 @@ export default function PaymentsClient({ data }: PaymentsClientProps) {
     }
   ];
 
-  // 3. Renderizamos el componente genérico
   return (
     <DataView 
       title="Historial de Pagos Activos"

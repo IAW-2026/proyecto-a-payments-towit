@@ -20,14 +20,12 @@ export default async function AdminRefundsPage(props: PageProps) {
 	const [paginatedRefunds, [{ totalCount }]] = await Promise.all([
 		db.select()
 			.from(refunds)
-			.where(isNull(refunds.deleted_at))
 			.orderBy(desc(refunds.created_at))
 			.limit(limit)
 			.offset(offset),
 
 		db.select({ totalCount: sql<number>`count(*)` })
 			.from(refunds)
-			.where(isNull(refunds.deleted_at))
 	]);
 
 	const totalPages = Math.ceil(Number(totalCount) / limit);

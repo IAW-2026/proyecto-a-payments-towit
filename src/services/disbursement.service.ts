@@ -1,5 +1,5 @@
 import { db } from "@/db";
-import { disbursements, users } from "@/db/schema";
+import { disbursements, payments, users } from "@/db/schema";
 import { eq, isNull, and, sql } from "drizzle-orm";
 
 interface ServiceResponse {
@@ -36,6 +36,14 @@ export async function cancelDisbursementSafely(transactionId: string): Promise<S
           status: record.status === 'COMPLETED' ? 'REFUNDED' : 'CANCELLED' 
         })
         .where(eq(disbursements.transaction_id, transactionId));
+
+      await tx.update(payments)
+        .set({ 
+          status: "COMPLETED", // Volvemos al estado anterior para permitir reintentos o cancelaciones posteriores
+          updated_at: new Date(),
+          deleted_at: null
+        })
+        .where(and(eq(payments.trip_id, record.trip_id), isNull(payments.deleted_at)));
 
       return { 
         success: true, 

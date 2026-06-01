@@ -20,7 +20,6 @@ export default async function AdminDisbursementsPage(props: PageProps) {
   const [paginatedDisbursements, [{ totalCount }]] = await Promise.all([
     db.select()
       .from(disbursements)
-      .where(isNull(disbursements.deleted_at))
       .orderBy(desc(disbursements.created_at))
       .limit(limit)
       .offset(offset),

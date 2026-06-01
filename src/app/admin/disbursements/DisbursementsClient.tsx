@@ -12,9 +12,8 @@ export default function DisbursementsClient({ data }: DisbursementsClientProps) 
   const columns: ColumnDef<any>[] = [
     { header: "ID Trans.", cell: (row) => <span className="font-mono text-xs text-gray-500">{row.transaction_id.split('-')[0]}...</span> },
     { header: "Viaje", accessorKey: "trip_id" },
-    { header: "Alias/CBU", accessorKey: "payment_alias" },
     { header: "Monto", cell: (row) => <span className="font-semibold text-gray-900">${Number(row.amount).toFixed(2)}</span> },
-    { header: "Comisión (Fee)", cell: (row) => <span className="text-gray-600">${Number(row.platform_fee).toFixed(2)}</span> },
+    { header: "Comisión (Fee)", cell: (row) => <span className="text-gray-600">${Number(row.platform_fee).toFixed(2)}</span>, hiddenOnMobile: true },
     { 
       header: "Estado", 
       cell: (row) => (
@@ -35,7 +34,18 @@ export default function DisbursementsClient({ data }: DisbursementsClientProps) 
           })}
         </time> 
       )
-    }
+    },
+    { 
+      header: "Borrado en", 
+      cell: (row) => (
+        row.deleted_at ? (
+          <time suppressHydrationWarning className="text-red-500 font-medium">
+            {new Date(row.deleted_at).toLocaleString(undefined, { day: '2-digit', month: 'short' })}
+          </time> 
+        ) : <span className="text-gray-300">-</span>
+      ),
+      hiddenOnMobile: true 
+    },
   ];
 
   const actions: ActionDef[] = [
