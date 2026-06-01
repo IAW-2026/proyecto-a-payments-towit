@@ -22,7 +22,6 @@ export const payments = pgTable('payments', {
     status: varchar('status', { length: 50 }).$type<TransactionStatus>().notNull().default('PENDING'),
     created_at: timestamp('created_at').defaultNow().notNull(),
     updated_at: timestamp('updated_at').defaultNow().notNull(),
-    expiration_date: timestamp('expiration_date'),
     deleted_at: timestamp('deleted_at'),
 }, (table) => ({
     // Partial index to ensure only one active payment per trip (ignoring deleted payments)
@@ -37,9 +36,7 @@ export const disbursements = pgTable('disbursements', {
     trip_id: varchar('trip_id', { length: 255 }).notNull(),
     amount: decimal('amount', { precision: 12, scale: 2 }).notNull(),
     id_user: integer('id_user').references(() => users.id_user).notNull(), // FK al usuario que recibe
-    payment_alias: varchar('payment_alias', { length: 255 }).notNull(),
     platform_fee: decimal('platform_fee', { precision: 12, scale: 2 }).notNull(),
-    external_id: varchar('external_id', { length: 255 }),
     status: varchar('status', { length: 50 }).$type<TransactionStatus>().notNull().default('PENDING'),
     created_at: timestamp('created_at').defaultNow().notNull(),
     deleted_at: timestamp('deleted_at'),
@@ -56,8 +53,6 @@ export const refunds = pgTable('refunds', {
     amount: decimal('amount', { precision: 12, scale: 2 }).notNull(),
     id_user: integer('id_user').references(() => users.id_user).notNull(), // FK al usuario devuelto
     refund_type: refundTypeEnum('refund_type').notNull(), // ej: 'TOTAL', 'PARTIAL'
-    external_id: varchar('external_id', { length: 255 }),
-    reason: text('reason'),
     status: varchar('status', { length: 50 }).$type<TransactionStatus>().notNull().default('PENDING'),
     created_at: timestamp('created_at').defaultNow().notNull(),
     deleted_at: timestamp('deleted_at'),
