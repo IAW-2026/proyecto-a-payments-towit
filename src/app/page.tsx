@@ -2,12 +2,19 @@
 import { Show, SignInButton } from "@clerk/nextjs";
 import Link from "next/link";
 import TransactionCard from "@/components/TransactionCard";
+import { Suspense } from "react";
+import UserBalanceCard from "@/components/UserBalanceCard";
+import UserBalanceSkeleton from "@/components/UserBalanceSkeleton";
+import { ReadCookieUserInformation } from "./lib/auth";
 
-export default function HomePage() {
+export default async function HomePage() {
+	const paymentsUser = await ReadCookieUserInformation("/");
+	
+	
 	return (
 		<div className="min-h-[calc(100vh-16rem)] overflow-hidden">
 
-			<main className="container mx-auto px-4 py-16 md:py-24 flex flex-col items-center">
+			<main className="container mx-auto px-4 pt-6 pb-16 md:pt-10 md:pb-24 flex flex-col items-center">
 
 				<Show when="signed-out">
 					<div className="flex flex-col items-center text-center w-full max-w-3xl mx-auto">
@@ -50,7 +57,13 @@ export default function HomePage() {
 				</Show>
 
 				<Show when="signed-in">
+					
+					
 					<section className="w-full max-w-4xl flex flex-col items-center">
+						
+						<Suspense fallback={<UserBalanceSkeleton />}>
+								<UserBalanceCard userId={paymentsUser.id_user} />
+						</Suspense>
 
 						<div className="w-full bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 md:p-10 shadow-sm text-center md:text-left flex flex-col md:flex-row items-center justify-between gap-6 mb-10">
 							<div className="flex-1">

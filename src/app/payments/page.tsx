@@ -1,10 +1,12 @@
-import React from "react";
+import React, { Suspense } from "react";
 import Link from "next/link";
 import { db } from "@/db";
 import { payments } from "@/db/schema";
 import { and, desc, eq, isNull } from "drizzle-orm";
 import { ReadCookieUserInformation } from "@/app/lib/auth";
 import TransactionCard from "@/components/TransactionCard";
+import UserBalanceCard from "@/components/UserBalanceCard";
+import UserBalanceSkeleton from "@/components/UserBalanceSkeleton";
 
 export const dynamic = "force-dynamic";
 
