@@ -6,12 +6,13 @@ Deploy de producción:  https://payments-towit-six.vercel.app
 ## Usuarios disponibles para realizar pruebas
 customerpayments+clerktest@iaw.com - iawuser#
 tower+clerktest@iaw.com - iawuser#
+admin+clerktest@iaw.com - iawuser#
 
 ## Instrucciones
 -Para generar una orden de pago se tiene que hacer un POST a "https://payments-towit-six.vercel.app/payments/", con el header Authorization (con la API key) y el body {"tripId": string, "clerkId": string, "amount": number}. 
 -Para generar un reembolso/cancelación se tiene que hacer un POST a "https://payments-towit-six.vercel.app/refunds/", con el header Authorization (con la API key) y el body {"tripId": string, "clerkId": string, "refundType": string}
 -Para generar un desembolso se tiene que hacer un POST a "https://payments-towit-six.vercel.app/disbursements/", con el header Authorization (con la API key) y el body {"tripId": string, "clerk_id": string, "feePercentage": number}
--Para completar un pago con MercadoPago se tiene que usar la cuenta de prueba "TESTUSER2137522699836841910" con la contraseña "48gAECJIAG" (codigo de verificación 113372). Se tiene que pagar con la siguiente tarjeta de prueba: <5031 7557 3453 0604, 11/30, 123>. El nombre tiene que ser "APRO" y DNI 12345678 para que el pago salga como aprobado.
+-Para ver la información de los pagos se entra a la pagina  /payments/ donde, si el estado es pendiente, se puede pagar con MercadoPago. Para completar un pago con MercadoPago se tiene que usar la cuenta de prueba "TESTUSER2137522699836841910" con la contraseña "48gAECJIAG" (codigo de verificación 113372). Se tiene que pagar con la siguiente tarjeta de prueba: <5031 7557 3453 0604, 11/30, 123>. El nombre tiene que ser "APRO" y DNI 12345678 para que el pago salga como aprobado.
 
 ## Descripción del proyecto
 TowIt Payments es el subsistema centralizado de gestión financiera desarrollado para la plataforma de transporte TowIt. Su objetivo principal es auditar, procesar y visualizar de manera segura el flujo de dinero generado a partir de los viajes, actuando como el centro de control financiero para los usuarios y administradores del sistema.
