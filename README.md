@@ -4,9 +4,9 @@ Aplicación **Payments** del [Proyecto IAW 2026](https://iaw-2026.github.io/proy
 Deploy de producción:  https://payments-towit-six.vercel.app
 
 ## Usuarios disponibles para realizar pruebas
-customerpayments+clerktest@iaw.com - iawuser#
-tower+clerktest@iaw.com - iawuser#
-admin+clerktest@iaw.com - iawuser#
+customerpayments+clerk_test@iaw.com - iawuser#
+tower+clerk_test@iaw.com - iawuser#
+admin+clerk_test@iaw.com - iawuser#
 
 ## Instrucciones
 -Para generar una orden de pago se tiene que hacer un POST a "https://payments-towit-six.vercel.app/payments/", con el header Authorization (con la API key) y el body {"tripId": string, "clerkId": string, "amount": number}. 
