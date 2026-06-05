@@ -6,6 +6,7 @@ import { and, isNull, eq, desc } from "drizzle-orm";
 import { ReadCookieUserInformation } from "@/app/lib/auth";
 import TransactionCard from "@/components/TransactionCard";
 import SearchBar from "@/components/SearchBar";
+import TransactionControlPanel from "@/components/TransactionControlPanel";
 
 export const dynamic = "force-dynamic";
 
@@ -47,7 +48,7 @@ export default async function RefundsPage({ searchParams }: DashboardProps) {
 			{/* ENCABEZADO MINIMALISTA */}
 			<div className="bg-white border-b border-slate-200 py-8 mb-10">
 				<div className="container mx-auto px-4 max-w-4xl">
-					<SearchBar />
+					<TransactionControlPanel />
 
 					<div className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 border border-blue-100 px-2.5 py-0.5 text-xs font-semibold text-blue-700 mb-3">
 						Panel de Control
