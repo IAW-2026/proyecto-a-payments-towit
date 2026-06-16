@@ -6,7 +6,7 @@ import { and, isNull, eq, desc } from "drizzle-orm";
 import { ReadCookieUserInformation } from "@/app/lib/auth";
 import TransactionCard from "@/components/TransactionCard";
 import SearchBar from "@/components/SearchBar";
-import TransactionControlPanel from "@/components/TransactionControlPanel";
+import TransactionControlPanel from "@/components/TransactionControlBar";
 
 export const dynamic = "force-dynamic";
 

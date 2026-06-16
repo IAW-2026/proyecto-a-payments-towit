@@ -7,14 +7,19 @@ import { ReadCookieUserInformation } from "@/app/lib/auth";
 import TransactionCard from "@/components/TransactionCard";
 import UserBalanceCard from "@/components/UserBalanceCard";
 import SearchBar from "@/components/SearchBar";
-import TransactionControlPanel from "@/components/TransactionControlPanel";
+import TransactionControlPanel from "@/components/TransactionControlBar";
+import { getFilteredPayments } from "@/services/payment.service";
 
 export const dynamic = "force-dynamic";
 
 const ITEMS_PER_PAGE = 5;
 
-// Definición de tipos para Next.js 16
-type SearchParams = Promise<{ page?: string }>;
+type SearchParams = Promise<{ 
+    page?: string;
+    search?: string;
+    status?: string;
+    sort?: string;
+}>;
 
 interface DashboardProps {
 	searchParams: SearchParams;
@@ -24,24 +29,21 @@ export default async function PaymentsPage({ searchParams }: DashboardProps) {
 	// 1. Esperamos los parámetros de la URL y calculamos la página actual
 	const resolvedParams = await searchParams;
 	const currentPage = Math.max(1, Number(resolvedParams.page) || 1);
-	const offset = (currentPage - 1) * ITEMS_PER_PAGE;
+	const searchTerm = resolvedParams.search;
+    const statusFilter = resolvedParams.status;
+    const sortParam = resolvedParams.sort;
 
 	// 2. Obtenemos el ID del usuario autenticado de forma segura
 	const paymentsUser = await ReadCookieUserInformation("/payments");
 
-	// 3. Consultamos a Neon trayendo 5 elementos + 1 extra para verificar si hay una página siguiente
-	const userPayments = await db.query.payments.findMany({
-		where: and(eq(payments.id_user, paymentsUser.id_user), isNull(payments.deleted_at)),
-		orderBy: [desc(payments.created_at)],
-		limit: ITEMS_PER_PAGE + 1,
-		offset: offset,
-	});
-
-	// Verificamos si existe una página posterior evaluando el elemento extra
-	const hasNextPage = userPayments.length > ITEMS_PER_PAGE;
-
-	// Recortamos el array para quedarnos únicamente con los 5 correspondientes a la página actual
-	const displayPayments = userPayments.slice(0, ITEMS_PER_PAGE);
+	const { payments: displayPayments, hasNextPage } = await getFilteredPayments({
+        userId: paymentsUser.id_user,
+        search: searchTerm,
+        status: statusFilter,
+        sort: sortParam,
+        page: currentPage,
+        itemsPerPage: ITEMS_PER_PAGE
+    });
 
 	return (
 		<div className="min-h-screen bg-slate-50 text-slate-900 pb-16">
@@ -75,10 +77,6 @@ export default async function PaymentsPage({ searchParams }: DashboardProps) {
 								key={tx.trip_id}
 								className="w-full flex justify-center group focus:outline-none"
 							>
-								{/* Agregamos efectos interactivos sobre la tarjeta:
-                  - shadow-md por defecto y shadow-xl al pasar el mouse.
-                  - Un sutil escalado táctil para smartphones (active:scale-[0.99]).
-                */}
 								<div className="w-full transition-all duration-200 hover:-translate-y-1 active:scale-[0.99] group-hover:shadow-xl rounded-2xl">
 									<TransactionCard
 										tripId={tx.trip_id || "S/D"}
@@ -105,7 +103,7 @@ export default async function PaymentsPage({ searchParams }: DashboardProps) {
 					)}
 
 					{/* CONTROLES DE PAGINACIÓN RESPONSIVOS */}
-					{userPayments.length > 0 && (
+					{displayPayments.length > 0 && (
 						<div className="w-full flex items-center justify-between border-t border-slate-200 pt-6 mt-4">
 
 							{/* Botón Anterior */}

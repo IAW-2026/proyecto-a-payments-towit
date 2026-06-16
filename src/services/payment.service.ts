@@ -1,6 +1,7 @@
 import { db } from "@/db";
 import { payments, disbursements, refunds } from "@/db/schema";
-import { eq, isNull, and } from "drizzle-orm";
+import { and, desc, asc, eq, isNull, ilike, SQL } from "drizzle-orm";
+import { TransactionStatus } from "@/types/transaction";
 
 export type PaymentErrorCode =
     | "PAYMENT_NOT_FOUND"
@@ -12,6 +13,64 @@ interface ServiceResponse {
     success: boolean;
     message?: string;
     errorCode?: PaymentErrorCode;
+}
+
+interface GetPaymentsParams {
+    userId: number;
+    search?: string;
+    status?: string;
+    sort?: string;
+    page: number;
+    itemsPerPage: number;
+}
+
+export async function getFilteredPayments(params: GetPaymentsParams) {
+    const { userId, search, status, sort, page, itemsPerPage } = params;
+    
+    const offset = (page - 1) * itemsPerPage;
+
+    // Dynamic construction of WHERE clause based on provided filters
+    const whereConditions: SQL[] = [
+        eq(payments.id_user, userId),
+        isNull(payments.deleted_at)
+    ];
+
+    if (status) {
+        whereConditions.push(eq(payments.status, status as TransactionStatus));
+    }
+
+    if (search) {
+        whereConditions.push(ilike(payments.trip_id, `%${search}%`));
+    }
+
+    // Dynamic construction of ORDER BY clause
+    let orderByCondition;
+    switch (sort) {
+        case "amount_desc": orderByCondition = desc(payments.amount); break;
+        case "amount_asc":  orderByCondition = asc(payments.amount); break;
+        case "created_asc": orderByCondition = asc(payments.created_at); break;
+        case "updated_desc":orderByCondition = desc(payments.updated_at); break;
+        case "updated_asc": orderByCondition = asc(payments.updated_at); break;
+        case "created_desc":
+        default:
+            orderByCondition = desc(payments.created_at);
+            break;
+    }
+
+    const data = await db.query.payments.findMany({
+        where: and(...whereConditions),
+        orderBy: [orderByCondition],
+        limit: itemsPerPage + 1, 
+        offset: offset,
+    });
+
+    const hasNextPage = data.length > itemsPerPage;
+    const displayPayments = data.slice(0, itemsPerPage);
+
+    return {
+        payments: displayPayments,
+        hasNextPage
+    };
 }
 
 export async function cancelPaymentSafely(transactionId: string): Promise<ServiceResponse> {

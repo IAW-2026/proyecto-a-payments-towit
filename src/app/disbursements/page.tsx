@@ -6,14 +6,20 @@ import { and, desc, eq, isNull } from "drizzle-orm";
 import { ReadCookieUserInformation } from "@/app/lib/auth";
 import TransactionCard from "@/components/TransactionCard";
 import SearchBar from "@/components/SearchBar";
-import TransactionControlPanel from "@/components/TransactionControlPanel";
+import TransactionControlPanel from "@/components/TransactionControlBar";
+import { getFilteredDisbursements } from "@/services/disbursement.service";
 
 export const dynamic = "force-dynamic";
 
 const ITEMS_PER_PAGE = 5;
 
 // Definición de tipos para Next.js 16
-type SearchParams = Promise<{ page?: string }>;
+type SearchParams = Promise<{ 
+    page?: string;
+    search?: string;
+    status?: string;
+    sort?: string;
+}>;
 
 interface DashboardProps {
 	searchParams: SearchParams;
@@ -23,24 +29,21 @@ export default async function DisbursementsPage({ searchParams }: DashboardProps
 	// 1. Esperamos los parámetros de la URL y calculamos la página actual
 	const resolvedParams = await searchParams;
 	const currentPage = Math.max(1, Number(resolvedParams.page) || 1);
-	const offset = (currentPage - 1) * ITEMS_PER_PAGE;
+	const searchTerm = resolvedParams.search;
+	const statusFilter = resolvedParams.status;
+	const sortParam = resolvedParams.sort;
 
 	// 2. Obtenemos el ID del usuario autenticado de forma segura
-	const paymentsUser = await ReadCookieUserInformation("/disbursements");
+	const paymentsUser = await ReadCookieUserInformation("/payments");
 
-	// 3. Consultamos a Neon trayendo 5 elementos + 1 extra para verificar si hay una página siguiente
-	const userDisbursements = await db.query.disbursements.findMany({
-		where: and(eq(disbursements.id_user, paymentsUser.id_user), isNull(disbursements.deleted_at)),
-		orderBy: [desc(disbursements.created_at)],
-		limit: ITEMS_PER_PAGE + 1,
-		offset: offset,
+	const { disbursements: displayDisbursements, hasNextPage } = await getFilteredDisbursements({
+		userId: paymentsUser.id_user,
+		search: searchTerm,
+		status: statusFilter,
+		sort: sortParam,
+		page: currentPage,
+		itemsPerPage: ITEMS_PER_PAGE
 	});
-
-	// Verificamos si existe una página posterior evaluando el elemento extra
-	const hasNextPage = userDisbursements.length > ITEMS_PER_PAGE;
-
-	// Recortamos el array para quedarnos únicamente con los 5 correspondientes a la página actual
-	const displayDisbursements = userDisbursements.slice(0, ITEMS_PER_PAGE);
 
 	return (
 		<div className="min-h-screen bg-slate-50 text-slate-900 pb-16">
@@ -104,7 +107,7 @@ export default async function DisbursementsPage({ searchParams }: DashboardProps
 					)}
 
 					{/* CONTROLES DE PAGINACIÓN RESPONSIVOS */}
-					{userDisbursements.length > 0 && (
+					{displayDisbursements.length > 0 && (
 						<div className="w-full flex items-center justify-between border-t border-slate-200 pt-6 mt-4">
 
 							{/* Botón Anterior */}
