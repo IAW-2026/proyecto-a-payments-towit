@@ -1,11 +1,71 @@
+import { TransactionStatus } from "@/types/transaction";
 import { db } from "@/db";
 import { users, payments, refunds } from "@/db/schema";
-import { and, eq, isNull, sql } from "drizzle-orm";
+import { and, asc, desc, eq, isNull, ilike , SQL, sql } from "drizzle-orm";
 
 interface TransactionResult {
     status: number;
     body: { message?: string; error?: string; };
 }
+
+interface GetRefundsParams {
+    userId: number; // Mantenemos el number que corregimos antes
+    search?: string;
+    status?: string;
+    sort?: string;
+    page: number;
+    itemsPerPage: number;
+}
+
+export async function getFilteredRefunds(params: GetRefundsParams) {
+    const { userId, search, status, sort, page, itemsPerPage } = params;
+    
+    const offset = (page - 1) * itemsPerPage;
+
+    const whereConditions: SQL[] = [
+        eq(refunds.id_user, userId),
+        isNull(refunds.deleted_at)
+    ];
+
+    if (status) {
+        whereConditions.push(eq(refunds.status, status as TransactionStatus));
+    }
+    if (search) {
+        whereConditions.push(ilike(refunds.trip_id, `%${search}%`));
+    }
+
+    // Dynamic ordering based on sort parameter
+    // As the refunds table doesn't have updated_at, we will use created_at for sorting by date
+    let orderByCondition;
+    switch (sort) {
+        case "amount_desc": orderByCondition = desc(refunds.amount); break;
+        case "amount_asc":  orderByCondition = asc(refunds.amount); break;
+        case "created_asc": orderByCondition = asc(refunds.created_at); break;
+        case "updated_desc":orderByCondition = desc(refunds.created_at); break;
+        case "updated_asc": orderByCondition = asc(refunds.created_at); break;
+        case "created_desc":
+        default:
+            orderByCondition = desc(refunds.created_at);
+            break;
+    }
+
+    const data = await db.query.refunds.findMany({
+        where: and(...whereConditions),
+        orderBy: [orderByCondition],
+        limit: itemsPerPage + 1, 
+        offset: offset,
+    });
+
+    const hasNextPage = data.length > itemsPerPage;
+    const displayRefunds = data.slice(0, itemsPerPage);
+
+    return {
+        refunds: displayRefunds,
+        hasNextPage
+    };
+}
+
+
 
 export async function processRefundTransaction(
     userId: number,
