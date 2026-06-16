@@ -6,7 +6,7 @@ import React from "react";
 
 export default function Header() {
   return (
-    <header className="bg-white border-b">
+    <header className="sticky top-0 z-50 bg-white border-b border-slate-200 shadow-sm">
       {/* px-4 en móvil, px-6 a partir de tablet (sm) */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
         
