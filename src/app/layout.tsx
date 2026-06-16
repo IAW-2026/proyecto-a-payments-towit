@@ -3,8 +3,8 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ClerkProvider } from '@clerk/nextjs'
 import { auth } from "@clerk/nextjs/server";
-import Header from "../components/Header";
-import AdminHeaderDropdown from "@/components/admin/AdminHeaderDropdown";
+import Header from "../components/Header/Header";
+import AdminHeaderDropdown from "@/components/Header/AdminHeaderDropdown";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
