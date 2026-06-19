@@ -79,9 +79,6 @@ export default function PaymentsClient({ data }: PaymentsClientProps) {
       variant: "danger",
       requireSelection: true,
       onAction: async (selectedId: string) => {
-        const confirmMessage = "¿Estás seguro de que deseas anular este pago? Se validará que no haya liquidaciones asociadas.";
-        if (!window.confirm(confirmMessage)) return { success: false, message: "Operación cancelada por el usuario" };
-        
         return await adminCancelPaymentAction(selectedId);
       }
     }
