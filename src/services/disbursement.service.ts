@@ -42,9 +42,6 @@ export async function getFilteredDisbursements(params: GetDisbursementsParams) {
         case "amount_desc": orderByCondition = desc(disbursements.amount); break;
         case "amount_asc":  orderByCondition = asc(disbursements.amount); break;
         case "created_asc": orderByCondition = asc(disbursements.created_at); break;
-        case "updated_desc":orderByCondition = desc(disbursements.created_at); break;
-        case "updated_asc": orderByCondition = asc(disbursements.created_at); break;
-        case "created_desc":
         default:
             orderByCondition = desc(disbursements.created_at);
             break;
