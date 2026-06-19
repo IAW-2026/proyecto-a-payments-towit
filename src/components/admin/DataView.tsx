@@ -1,8 +1,9 @@
 'use client'
 
 import React, { useState } from "react";
+import MessageModal, {MessageModalType} from "@/components/MessageModal";
 
-// --- TIPOS GENÉRICOS ---
+// TIPOS GENÉRICOS 
 export type ColumnDef<T> = {
   header: string;
   accessorKey?: keyof T;
@@ -34,6 +35,7 @@ export default function DataView<T>({ data, columns, actions = [], keyExtractor,
     setSelectedId((prev) => (prev === id ? null : id));
   };
 
+  
   return (
     <div className="space-y-4">
       <DataToolbar selectedId={selectedId} actions={actions} title={title} />
@@ -52,6 +54,16 @@ export default function DataView<T>({ data, columns, actions = [], keyExtractor,
 function DataToolbar({ selectedId, actions, title }: { selectedId: string | null, actions: ActionDef[], title?: string }) {
   const [isProcessing, setIsProcessing] = useState(false);
 
+  const [modalState, setModalState] = useState({
+    isOpen: false,
+    type: 'info',
+    title: '',
+    message: ''
+  });
+
+  const closeModal = () => setModalState(prev => ({ ...prev, isOpen: false }));
+
+
   const handleActionClick = async (action: ActionDef) => {
     if (action.requireSelection && !selectedId) return;
     
@@ -60,9 +72,19 @@ function DataToolbar({ selectedId, actions, title }: { selectedId: string | null
     setIsProcessing(false);
 
     if (result.success) {
-      alert("✅ " + (result.message || "Operación exitosa"));
+      setModalState({
+        isOpen: true,
+        type: 'success',
+        title: 'Operación Exitosa',
+        message: 'La operación se completó con éxito.'
+      });
     } else {
-      alert("⚠️ Error: " + result.message);
+      setModalState({
+        isOpen: true,
+        type: 'error',
+        title: 'Error',
+        message: 'Ocurrió un error al realizar la operación.'
+      });
     }
   };
 
@@ -93,6 +115,16 @@ function DataToolbar({ selectedId, actions, title }: { selectedId: string | null
           );
         })}
       </div>
+
+
+      <MessageModal
+        isOpen={modalState.isOpen}
+        type={modalState.type as MessageModalType}
+        title={modalState.title}
+        message={modalState.message}
+        onClose={closeModal}
+      />
+      
     </div>
   );
 }

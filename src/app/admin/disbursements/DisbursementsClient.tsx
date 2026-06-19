@@ -54,9 +54,6 @@ export default function DisbursementsClient({ data }: DisbursementsClientProps) 
       variant: "danger",
       requireSelection: true,
       onAction: async (selectedId: string) => {
-        if (!window.confirm("¿Seguro que deseas revertir esta liquidación? Si ya fue pagada, se le generará una deuda al conductor.")) {
-          return { success: false, message: "Operación cancelada" };
-        }
         return await adminCancelDisbursementAction(selectedId);
       }
     }

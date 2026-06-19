@@ -41,9 +41,6 @@ export async function getFilteredRefunds(params: GetRefundsParams) {
         case "amount_desc": orderByCondition = desc(refunds.amount); break;
         case "amount_asc":  orderByCondition = asc(refunds.amount); break;
         case "created_asc": orderByCondition = asc(refunds.created_at); break;
-        case "updated_desc":orderByCondition = desc(refunds.created_at); break;
-        case "updated_asc": orderByCondition = asc(refunds.created_at); break;
-        case "created_desc":
         default:
             orderByCondition = desc(refunds.created_at);
             break;

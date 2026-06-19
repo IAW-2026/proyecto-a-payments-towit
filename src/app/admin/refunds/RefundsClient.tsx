@@ -51,7 +51,6 @@ export default function RefundsClient({ data }: RefundsClientProps) {
       variant: "danger",
       requireSelection: true,
       onAction: async (selectedId: string) => {
-        if (!window.confirm("¿Seguro que deseas anular este reembolso?")) return { success: false, message: "Cancelado" };
         return await adminCancelRefundAction(selectedId);
       }
     }
