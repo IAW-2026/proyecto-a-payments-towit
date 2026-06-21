@@ -5,6 +5,7 @@ import { users, payments, disbursements } from "@/db/schema";
 import { eq, and, sql, isNull } from "drizzle-orm";
 import { TransactionStatus } from "@/types/transaction";
 import { getPaymentsUser } from "@/db/queries/users";
+import { getFilteredDisbursements, GetDisbursementsParams } from "@/services/disbursement.service";
 
 interface DisbursementRequestBody {
     clerkId: string;
@@ -127,4 +128,55 @@ export async function POST(req: NextRequest) {
         console.error("Critical server error in POST /api/disbursements:", error);
         return NextResponse.json({ error: "Internal server error" }, { status: 500 });
     }
+}
+
+export async function GET(req: NextRequest) {
+  try {
+    // 1. Autenticación Server-to-Server (S2S) vía API Key
+    const authError = authenticateRequest(req);
+    if (authError) 
+      return authError;
+
+    // 2. Extracción y parseo de parámetros HTTP
+    const { searchParams } = new URL(req.url);
+    
+    // Armamos el objeto con la interfaz exacta del servicio
+    const params: GetDisbursementsParams = {
+      page: Number(searchParams.get("page")) || 1,
+      itemsPerPage: Number(searchParams.get("limit")) || 25,
+      search: searchParams.get("search") || undefined,
+      status: searchParams.get("status") || undefined,
+      sort: searchParams.get("sort") || undefined,
+      includeDeleted: true, 
+    };
+
+    // 3. Llamada a la capa de servicio
+    const result = await getFilteredDisbursements(params);
+
+    // 4. Devolución de la respuesta
+    return NextResponse.json(result, { status: 200 });
+
+  } catch (error) {
+    console.error("[GET /api/disbursements] Error interno:", error);
+    return NextResponse.json(
+      { error: "Ocurrió un error interno en el servidor al procesar las liquidaciones." }, 
+      { status: 500 }
+    );
+  }
+}
+
+function authenticateRequest(req: NextRequest): NextResponse | null {
+    const authHeader = req.headers.get("x-api-key");
+    const expectedSecret = process.env.INTERNAL_API_SECRET;
+
+    if (!expectedSecret) {
+        console.error("INTERNAL_API_SECRET is not configured.");
+        return NextResponse.json({ error: "Internal server error." }, { status: 500 });
+    }
+
+    if (!authHeader || authHeader !== expectedSecret) {
+        return NextResponse.json({ error: "Not authorized" }, { status: 401 });
+    }
+
+    return null;
 }
