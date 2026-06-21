@@ -6,7 +6,7 @@ interface ClientWebhookPayload {
 export async function notifyClientTransactionStatus(payload: ClientWebhookPayload): Promise<boolean> {
     
     // TODO: Cuando el otro equipo termine su API, cambiar esta variable a la URL real
-    const CLIENT_SYSTEM_API_URL = process.env.CLIENT_SYSTEM_URL; 
+    const CLIENT_SYSTEM_API_URL = process.env.CUSTOMER_SYSTEM_URL; 
 
     if (!CLIENT_SYSTEM_API_URL) {
         // MOCK MODE 
@@ -17,11 +17,11 @@ export async function notifyClientTransactionStatus(payload: ClientWebhookPayloa
     }
 
     try {
-        const response = await fetch(CLIENT_SYSTEM_API_URL, {
+        const response = await fetch(`${CLIENT_SYSTEM_API_URL}/api/customer/trips/${payload.tripId}/payment-confirmation`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${process.env.CLIENT_SYSTEM_SECRET}`
+                'Authorization': `Bearer ${process.env.INTERNAL_API_SECRET}`
             },
             body: JSON.stringify(payload)
         });
