@@ -21,7 +21,7 @@ export async function notifyClientTransactionStatus(payload: ClientWebhookPayloa
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${process.env.INTERNAL_API_SECRET}`
+                'X-Api-Key': `${process.env.INTERNAL_API_SECRET}`
             },
             body: JSON.stringify(payload)
         });
