@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { payments } from "@/db/schema";
 import { getPaymentsUser } from "@/db/queries/users";
+import {getFilteredPayments, GetPaymentsParams} from "@/services/payment.service";
 
 
 interface PaymentPayload {
@@ -114,4 +115,55 @@ async function executePaymentInsertion(tripId: string, clerkId: string, amount: 
         
         throw error;
     }
+}
+
+export async function GET(req: NextRequest) {
+  try {
+    // 1. Autorización
+    const authError = authenticateRequest(req);
+    if (authError) return authError;
+
+    // 2. Extracción y parseo de parámetros HTTP
+    const { searchParams } = new URL(req.url);
+    
+    // CORRECCIÓN: Adaptamos los nombres a la interfaz GetPaymentsParams
+    const params: GetPaymentsParams = {
+      page: Number(searchParams.get("page")) || 1,
+      itemsPerPage: Number(searchParams.get("limit")) || 25, 
+      search: searchParams.get("search") || undefined,
+      status: searchParams.get("status") || undefined,
+      sort: searchParams.get("sort") || undefined,
+      includeDeleted: true, 
+    };
+
+    // 3. Llamada a la capa de servicio usando la función unificada
+    const result = await getFilteredPayments(params);
+
+    // 4. Devolución de la respuesta
+    return NextResponse.json(result, { status: 200 });
+
+  } catch (error) {
+    console.error("[GET /api/payments] Error interno:", error);
+    return NextResponse.json(
+      { error: "Ocurrió un error interno en el servidor al procesar los pagos." }, 
+      { status: 500 }
+    );
+  }
+}
+
+// Uses x-api-key for GET endpoint
+function authenticateRequest(req: NextRequest): NextResponse | null {
+    const authHeader = req.headers.get("x-api-key");
+    const expectedSecret = process.env.INTERNAL_API_SECRET;
+
+    if (!expectedSecret) {
+        console.error("INTERNAL_API_SECRET is not configured.");
+        return NextResponse.json({ error: "Internal server error." }, { status: 500 });
+    }
+
+    if (!authHeader || authHeader !== expectedSecret) {
+        return NextResponse.json({ error: "Not authorized" }, { status: 401 });
+    }
+
+    return null;
 }

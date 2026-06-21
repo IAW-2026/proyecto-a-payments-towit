@@ -1,64 +1,111 @@
 import { TransactionStatus } from "@/types/transaction";
 import { db } from "@/db";
 import { users, payments, refunds } from "@/db/schema";
-import { and, asc, desc, eq, isNull, ilike , SQL, sql } from "drizzle-orm";
+import { and, asc, desc, eq, isNull, ilike , SQL, sql, or } from "drizzle-orm";
 
 interface TransactionResult {
     status: number;
     body: { message?: string; error?: string; };
 }
 
-interface GetRefundsParams {
-    userId: number; // Mantenemos el number que corregimos antes
+export interface GetRefundsParams {
+    userId?: number; 
     search?: string;
     status?: string;
     sort?: string;
     page: number;
     itemsPerPage: number;
+    includeDeleted?: boolean; 
 }
 
 export async function getFilteredRefunds(params: GetRefundsParams) {
-    const { userId, search, status, sort, page, itemsPerPage } = params;
+    const { 
+        userId, 
+        search, 
+        status, 
+        sort, 
+        page = 1, 
+        itemsPerPage = 25, 
+        includeDeleted = false 
+    } = params;
     
     const offset = (page - 1) * itemsPerPage;
+    const conditions: SQL[] = [];
 
-    const whereConditions: SQL[] = [
-        eq(refunds.id_user, userId),
-        isNull(refunds.deleted_at)
-    ];
-
-    if (status) {
-        whereConditions.push(eq(refunds.status, status as TransactionStatus));
+    // 1. Filtro por Usuario
+    if (userId) {
+        conditions.push(eq(refunds.id_user, userId));
     }
+
+    // 2. Filtro de Borrado Lógico (Soft Delete)
+    if (!includeDeleted) {
+        conditions.push(isNull(refunds.deleted_at));
+    }
+
+    // 3. Filtro por Estado
+    if (status && status !== "ALL") {
+        conditions.push(eq(refunds.status, status as TransactionStatus));
+    }
+
+    // 4. Filtro de Búsqueda (Search) - Avanzado con soporte de UUID
     if (search) {
-        whereConditions.push(ilike(refunds.trip_id, `%${search}%`));
+        const searchTerm = `%${search}%`;
+        conditions.push(
+            or(
+                ilike(refunds.trip_id, searchTerm),
+                ilike(sql`${refunds.transaction_id}::text`, searchTerm)
+            )! // Usamos el "!" para evitar el falso positivo de TypeScript
+        );
     }
 
-    // Dynamic ordering based on sort parameter
-    // As the refunds table doesn't have updated_at, we will use created_at for sorting by date
+    // Empaquetamos las condiciones de forma segura
+    const whereClause = conditions.length > 0 ? and(...conditions)! : sql`1=1`;
+
+    // 5. Armado dinámico de la cláusula ORDER BY
+    // (refunds no tiene updated_at en el schema, usamos created_at)
     let orderByCondition;
     switch (sort) {
         case "amount_desc": orderByCondition = desc(refunds.amount); break;
         case "amount_asc":  orderByCondition = asc(refunds.amount); break;
         case "created_asc": orderByCondition = asc(refunds.created_at); break;
+        case "created_desc":
         default:
             orderByCondition = desc(refunds.created_at);
             break;
     }
 
-    const data = await db.query.refunds.findMany({
-        where: and(...whereConditions),
-        orderBy: [orderByCondition],
-        limit: itemsPerPage + 1, 
-        offset: offset,
-    });
+    // 6. Ejecución concurrente (Data + Count)
+    const [data, [{ totalCount }]] = await Promise.all([
+        db.select()
+            .from(refunds)
+            .where(whereClause)
+            .orderBy(orderByCondition)
+            .limit(itemsPerPage)
+            .offset(offset),
 
-    const hasNextPage = data.length > itemsPerPage;
-    const displayRefunds = data.slice(0, itemsPerPage);
+        db.select({ totalCount: sql<number>`count(*)` })
+            .from(refunds)
+            .where(whereClause)
+    ]);
 
+    const count = Number(totalCount);
+    const totalPages = Math.ceil(count / itemsPerPage);
+    const hasNextPage = page < totalPages;
+
+    // 7. Retorno Unificado
     return {
-        refunds: displayRefunds,
-        hasNextPage
+        // Firmas Legacy (Client-side usage)
+        refunds: data,
+        hasNextPage,
+        
+        // Firmas Modernas (Control Plane / API usage)
+        data,
+        meta: {
+            totalCount: count,
+            page,
+            limit: itemsPerPage,
+            totalPages,
+        }
     };
 }
 

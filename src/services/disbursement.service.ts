@@ -1,65 +1,111 @@
 import { TransactionStatus } from "@/types/transaction";
 import { db } from "@/db";
 import { disbursements, payments, users } from "@/db/schema";
-import { eq, isNull, and, sql, SQL, ilike, desc, asc } from "drizzle-orm";
+import { eq, isNull, and, sql, SQL, ilike, desc, asc, or } from "drizzle-orm";
 
 interface ServiceResponse {
   success: boolean;
   message?: string;
 }
 
-interface GetDisbursementsParams {
-    userId: number;
+export interface GetDisbursementsParams {
+    userId?: number; // Lo hacemos opcional para el panel de administración
     search?: string;
     status?: string;
     sort?: string;
     page: number;
     itemsPerPage: number;
+    includeDeleted?: boolean; // Permite unificar consultas del cliente y del Control Plane
 }
 
-
 export async function getFilteredDisbursements(params: GetDisbursementsParams) {
-    const { userId, search, status, sort, page, itemsPerPage } = params;
+    const { 
+        userId, 
+        search, 
+        status, 
+        sort, 
+        page = 1, 
+        itemsPerPage = 25, 
+        includeDeleted = false 
+    } = params;
     
     const offset = (page - 1) * itemsPerPage;
+    const conditions: SQL[] = [];
 
-    const whereConditions: SQL[] = [
-        eq(disbursements.id_user, userId),
-        isNull(disbursements.deleted_at)
-    ];
-
-    if (status) {
-        whereConditions.push(eq(disbursements.status, status as TransactionStatus));
+    // 1. Filtro por Usuario (ahora es opcional)
+    if (userId) {
+        conditions.push(eq(disbursements.id_user, userId));
     }
+
+    // 2. Filtro de Borrado Lógico (Soft Delete)
+    if (!includeDeleted) {
+        conditions.push(isNull(disbursements.deleted_at));
+    }
+
+    // 3. Filtro por Estado
+    if (status && status !== "ALL") {
+        conditions.push(eq(disbursements.status, status as TransactionStatus));
+    }
+
+    // 4. Filtro de Búsqueda (Search) - Avanzado con soporte de UUID
     if (search) {
-        whereConditions.push(ilike(disbursements.trip_id, `%${search}%`));
+        const searchTerm = `%${search}%`;
+        conditions.push(
+            or(
+                ilike(disbursements.trip_id, searchTerm),
+                ilike(sql`${disbursements.transaction_id}::text`, searchTerm)
+            )! // Usamos el "!" para evitar el falso positivo de TypeScript
+        );
     }
 
-    // Dynamic ordering based on sort parameter
-    // As the disbursements table doesn't have updated_at, we will use created_at for sorting by date
+    // Empaquetamos las condiciones de forma segura
+    const whereClause = conditions.length > 0 ? and(...conditions)! : sql`1=1`;
+
+    // 5. Armado dinámico de la cláusula ORDER BY
+    // (disbursements no tiene updated_at en el schema, usamos created_at)
     let orderByCondition;
     switch (sort) {
         case "amount_desc": orderByCondition = desc(disbursements.amount); break;
         case "amount_asc":  orderByCondition = asc(disbursements.amount); break;
         case "created_asc": orderByCondition = asc(disbursements.created_at); break;
+        case "created_desc":
         default:
             orderByCondition = desc(disbursements.created_at);
             break;
     }
 
-    const data = await db.query.disbursements.findMany({
-        where: and(...whereConditions),
-        orderBy: [orderByCondition],
-        limit: itemsPerPage + 1, 
-        offset: offset,
-    });
+    // 6. Ejecución concurrente (Data + Count)
+    const [data, [{ totalCount }]] = await Promise.all([
+        db.select()
+            .from(disbursements)
+            .where(whereClause)
+            .orderBy(orderByCondition)
+            .limit(itemsPerPage)
+            .offset(offset),
+            
+        db.select({ totalCount: sql<number>`count(*)` })
+            .from(disbursements)
+            .where(whereClause)
+    ]);
 
-    const hasNextPage = data.length > itemsPerPage;
-    const displayDisbursements = data.slice(0, itemsPerPage);
+    const count = Number(totalCount);
+    const totalPages = Math.ceil(count / itemsPerPage);
+    const hasNextPage = page < totalPages;
 
+    // 7. Retorno Unificado
     return {
-        disbursements: displayDisbursements,
-        hasNextPage
+        // Firmas Legacy (Client-side usage)
+        disbursements: data,
+        hasNextPage,
+        
+        // Firmas Modernas (Control Plane / API usage)
+        data,
+        meta: {
+            totalCount: count,
+            page,
+            limit: itemsPerPage,
+            totalPages,
+        }
     };
 }
 
