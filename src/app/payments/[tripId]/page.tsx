@@ -138,7 +138,7 @@ export default async function TripPaymentPage({ params }: PageProps) {
                                 </p>
                             </div>
                             <a 
-                                href={`${process.env.CUSTOMER_SYSTEM_URL}/costumer/request-ride`} 
+                                href={`${process.env.CUSTOMER_SYSTEM_URL}/customer/request-ride`} 
                                 target="_blank" 
                                 rel="noopener noreferrer" 
                                 className="px-6 py-2.5 bg-indigo-600 text-white font-semibold rounded-xl shadow-sm hover:bg-indigo-700 active:scale-95 transition-all text-sm w-full sm:w-auto text-center whitespace-nowrap focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
