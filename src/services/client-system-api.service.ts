@@ -27,7 +27,7 @@ export async function notifyClientTransactionStatus(payload: ClientWebhookPayloa
         });
 
         if (!response.ok) {
-            console.error(`[CLIENT SYSTEM API ERROR] Status: ${response.status}`);
+            console.error(`[CLIENT SYSTEM API ERROR] Status: ${response.status}, Response: ${await response.text()}`);
             return false;
         }
 
