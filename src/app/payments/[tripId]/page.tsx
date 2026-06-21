@@ -124,6 +124,31 @@ export default async function TripPaymentPage({ params }: PageProps) {
                     />
                 </div>
 
+                <div className="w-full max-w-2xl mt-2 mb-8 flex flex-col gap-4">
+                    
+                    {/* Banner dinámico para seguimiento del viaje */}
+                    {payment.status === "COMPLETED" && (
+                        <div className="bg-indigo-50 border border-indigo-100 rounded-2xl p-5 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-5 shadow-sm animate-in fade-in slide-in-from-bottom-4 duration-500">
+                            <div className="text-center sm:text-left">
+                                <h3 className="text-indigo-900 font-bold text-[15px]">
+                                    ¿Acabás de realizar el pago?
+                                </h3>
+                                <p className="text-indigo-700 text-sm mt-1 leading-relaxed">
+                                    Ingresá a tu viaje para ver la asignación y la ubicación de la grúa en tiempo real.
+                                </p>
+                            </div>
+                            <a 
+                                href={`${process.env.CUSTOMER_SYSTEM_URL}/costumer/request-ride`} 
+                                target="_blank" 
+                                rel="noopener noreferrer" 
+                                className="px-6 py-2.5 bg-indigo-600 text-white font-semibold rounded-xl shadow-sm hover:bg-indigo-700 active:scale-95 transition-all text-sm w-full sm:w-auto text-center whitespace-nowrap focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+                            >
+                                Ir a mi viaje
+                            </a>
+                        </div>
+                    )}
+                </div>
+
                 <div className="flex justify-center w-full max-w-2xl mt-2 mb-8">
                     <Link 
                         href="/payments" 
