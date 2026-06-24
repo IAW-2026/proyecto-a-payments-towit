@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cancelPaymentSafely } from "@/services/payment.service"; // Ajustá el path según tu proyecto
+import { authenticateRequest } from "@/app/lib/auth";
 
 // Definimos la interfaz para los parámetros dinámicos de la ruta
 interface RouteContext {
@@ -11,7 +12,7 @@ interface RouteContext {
 export async function DELETE(req: NextRequest, context: RouteContext) {
     try {
         // 1. Autorización: Proteger el endpoint (Reutilizando tu lógica de seguridad)
-        const authError = requestAuthorization(req);
+        const authError = authenticateRequest(req);
         if (authError) return authError;
 
         // 2. Validación de parámetros de entrada
@@ -41,7 +42,7 @@ export async function DELETE(req: NextRequest, context: RouteContext) {
                     { error: result.message, code: result.errorCode },
                     { status: 404 } // Not Found
                 );
-            
+
             case "ACTIVE_DISBURSEMENT_EXISTS":
             case "ACTIVE_REFUND_EXISTS":
                 return NextResponse.json(
@@ -59,7 +60,7 @@ export async function DELETE(req: NextRequest, context: RouteContext) {
                 // Fallback para códigos no mapeados
                 return NextResponse.json(
                     { error: result.message || "Unknown error processing the request", code: "UKNOWN_ERROR" },
-                    { status: 400 } 
+                    { status: 400 }
                 );
         }
 
@@ -70,21 +71,4 @@ export async function DELETE(req: NextRequest, context: RouteContext) {
             { status: 500 }
         );
     }
-}
-
-// Función auxiliar para validar credenciales del endpoint
-function requestAuthorization(req: NextRequest): NextResponse | null {
-    const authHeader = req.headers.get("authorization")?.replace("Bearer ", "") || req.headers.get("x-api-key");
-    const expectedSecret = process.env.INTERNAL_API_SECRET;
-
-    if (!expectedSecret) {
-        console.error("CRITICAL: INTERNAL_API_SECRET no está configurado en las variables de entorno.");
-        return NextResponse.json({ error: "Error de configuración del servidor." }, { status: 500 });
-    }
-
-    if (!authHeader || authHeader !== expectedSecret) {
-        return NextResponse.json({ error: "No autorizado. Credenciales inválidas." }, { status: 401 });
-    }
-
-    return null;
 }

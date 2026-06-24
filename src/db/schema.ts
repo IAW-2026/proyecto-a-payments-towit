@@ -1,5 +1,5 @@
 // Translates db schemas defined in documentation to TS code
-import { pgTable, serial, uuid, varchar, decimal, timestamp, text, integer, pgEnum, uniqueIndex} from "drizzle-orm/pg-core";
+import { pgTable, serial, uuid, varchar, decimal, timestamp, text, integer, pgEnum, uniqueIndex, boolean} from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import { TransactionStatus } from "@/types/transaction";
 
@@ -10,6 +10,7 @@ export const users = pgTable('users', {
     id_user: serial('id_user').primaryKey(),
     id_clerk: varchar('clerk_id', { length: 255 }).notNull().unique(),
     balance: decimal('balance', { precision: 12, scale: 2 }).notNull().default('0.00'),
+    is_banned: boolean('is_banned').notNull().default(false),
 });
 
 // Payments table

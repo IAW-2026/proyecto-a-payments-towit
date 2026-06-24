@@ -43,6 +43,13 @@
       "when": 1780290339242,
       "tag": "0005_happy_piledriver",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1782310486726,
+      "tag": "0006_soft_amazoness",
+      "breakpoints": true
     }
   ]
 }
