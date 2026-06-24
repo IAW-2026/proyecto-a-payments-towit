@@ -44,7 +44,7 @@ process.env.INTERNAL_API_SECRET = MOCK_SECRET;
 function createMockRequest(body: Record<string, any>, authHeader: string | null = `Bearer ${MOCK_SECRET}`) {
     const headers = new Headers();
     if (authHeader) headers.set('Authorization', authHeader);
-    
+
     return new NextRequest('http://localhost:3000/api/disbursements', {
         method: 'POST',
         headers,
@@ -57,11 +57,11 @@ function createMockRequest(body: Record<string, any>, authHeader: string | null 
 // ---------------------------------------------------------------------------
 
 describe('POST /api/disbursements', () => {
-    
+
     beforeEach(() => {
         vi.clearAllMocks();
         // Por defecto, simulamos que el usuario siempre existe en los tests que lleguen a esa línea
-        vi.mocked(getPaymentsUser).mockResolvedValue({ userId: 1, balance: '100.00' });
+        vi.mocked(getPaymentsUser).mockResolvedValue({ userId: 1, balance: '100.00', is_banned: false });
     });
 
     // --- GRUPO 1: Validaciones de Entrada ---
@@ -76,7 +76,7 @@ describe('POST /api/disbursements', () => {
         const req = createMockRequest({ clerkId: 'c_1', tripId: 't_1' }); // Falta feePercentage
         const response = await POST(req);
         const data = await response.json();
-        
+
         expect(response.status).toBe(400);
         expect(data.error).toBe('Missing required parameters');
     });
@@ -134,7 +134,7 @@ describe('POST /api/disbursements', () => {
     it('Debe retornar 409 si ocurre un doble intento de liquidación (Error de Unique Constraint)', async () => {
         // Arrange
         const req = createMockRequest({ clerkId: 'c_1', tripId: 't_1', feePercentage: 15 });
-        
+
         // Aquí hacemos fallar la transacción entera imitando un error nativo de Postgres (23505)
         vi.mocked(db.transaction).mockRejectedValueOnce({ code: '23505' });
 
@@ -159,7 +159,7 @@ describe('POST /api/disbursements', () => {
         // Assert
         expect(response.status).toBe(201);
         expect(data.message).toBe('Disbursement successful');
-        
+
         // Verificamos que se ejecutó el insert y las dos actualizaciones dentro de la transacción
         expect(mockTx.insert).toHaveBeenCalledTimes(1);
         expect(mockTx.update).toHaveBeenCalledTimes(2); // Uno para balance (users) y otro para el status (payments)
