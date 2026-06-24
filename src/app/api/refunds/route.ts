@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
         }
 
         // Business logic and state management 
-        const result = await processRefundTransaction(user.userId, tripId, refundType);   
+        const result = await processRefundTransaction(user.userId, tripId, refundType);
 
         return NextResponse.json(result.body, { status: result.status });
 
@@ -51,37 +51,37 @@ export async function POST(req: NextRequest) {
 }
 
 export async function GET(req: NextRequest) {
-  try {
-    // 1. Autenticación Server-to-Server (S2S) vía API Key
-    const authError = requestAuthorization(req);
-    if (authError) return authError;
+    try {
+        // 1. Autenticación Server-to-Server (S2S) vía API Key
+        const authError = requestAuthorization(req);
+        if (authError) return authError;
 
-    // 2. Extracción y parseo de parámetros HTTP
-    const { searchParams } = new URL(req.url);
-    
-    // Armamos el objeto respetando el contrato estricto del servicio
-    const params: GetRefundsParams = {
-      page: Number(searchParams.get("page")) || 1,
-      itemsPerPage: Number(searchParams.get("limit")) || 25,
-      search: searchParams.get("search") || undefined,
-      status: searchParams.get("status") || undefined,
-      sort: searchParams.get("sort") || undefined,
-      includeDeleted: true, 
-    };
+        // 2. Extracción y parseo de parámetros HTTP
+        const { searchParams } = new URL(req.url);
 
-    // 3. Llamada a la capa de servicio
-    const result = await getFilteredRefunds(params);
+        // Armamos el objeto respetando el contrato estricto del servicio
+        const params: GetRefundsParams = {
+            page: Number(searchParams.get("page")) || 1,
+            itemsPerPage: Number(searchParams.get("limit")) || 25,
+            search: searchParams.get("search") || undefined,
+            status: searchParams.get("status") || undefined,
+            sort: searchParams.get("sort") || undefined,
+            includeDeleted: true,
+        };
 
-    // 4. Devolución de la respuesta
-    return NextResponse.json(result, { status: 200 });
+        // 3. Llamada a la capa de servicio
+        const result = await getFilteredRefunds(params);
 
-  } catch (error) {
-    console.error("[GET /api/refunds] Error interno:", error);
-    return NextResponse.json(
-      { error: "Ocurrió un error interno en el servidor al procesar los reembolsos." }, 
-      { status: 500 }
-    );
-  }
+        // 4. Devolución de la respuesta
+        return NextResponse.json(result, { status: 200 });
+
+    } catch (error) {
+        console.error("[GET /api/refunds] Error interno:", error);
+        return NextResponse.json(
+            { error: "Ocurrió un error interno en el servidor al procesar los reembolsos." },
+            { status: 500 }
+        );
+    }
 }
 
 function requestAuthorization(req: NextRequest): NextResponse | null {

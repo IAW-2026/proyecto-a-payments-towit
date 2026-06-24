@@ -6,6 +6,7 @@ import { eq, and, sql, isNull } from "drizzle-orm";
 import { TransactionStatus } from "@/types/transaction";
 import { getPaymentsUser } from "@/db/queries/users";
 import { getFilteredDisbursements, GetDisbursementsParams } from "@/services/disbursement.service";
+import { authenticateRequest } from "@/app/lib/auth";
 
 interface DisbursementRequestBody {
     clerkId: string;
@@ -21,22 +22,11 @@ interface TransactionResult {
     };
 }
 
-function isRequestAuthorized(req: NextRequest): boolean {
-    // Busca la llave en los headers estándar de API o en Authorization
-    const apiKey = req.headers.get("x-api-key") || req.headers.get("authorization")?.replace("Bearer ", "");
-    const validKey = process.env.INTERNAL_API_SECRET;
-    
-    if (!validKey) {
-        console.warn("Critical: INTERNAL_API_SECRET not configured.");
-        return false;
-    }
-    
-    return apiKey === validKey;
-}
+
 
 async function executeDisbursementTransaction(
-    clerkId: string, 
-    tripId: string, 
+    clerkId: string,
+    tripId: string,
     feePercentage: number
 ): Promise<TransactionResult> {
 
@@ -50,11 +40,11 @@ async function executeDisbursementTransaction(
     }
 
     try {
-        return await db.transaction(async (tx) => {            
+        return await db.transaction(async (tx) => {
             const [paymentRecord] = await tx.select()
                 .from(payments)
                 .where(and(eq(payments.trip_id, tripId), isNull(payments.deleted_at)))
-                .for('update'); 
+                .for('update');
 
             if (!paymentRecord) {
                 return { status: 404, body: { error: "Trip payment not found" } };
@@ -78,14 +68,14 @@ async function executeDisbursementTransaction(
             });
 
             await tx.update(users)
-                .set({ 
-                    balance: sql`${users.balance} + ${netAmount.toFixed(2)}` 
+                .set({
+                    balance: sql`${users.balance} + ${netAmount.toFixed(2)}`
                 })
                 .where(eq(users.id_user, driver.userId));
-            
+
 
             await tx.update(payments)
-                .set({ 
+                .set({
                     status: "DISBURSED", // Actualizamos a nuestro nuevo estado terminal
                     updated_at: new Date(),
                     deleted_at: null
@@ -109,13 +99,12 @@ async function executeDisbursementTransaction(
 
 export async function POST(req: NextRequest) {
     try {
-        if (!isRequestAuthorized(req)) {
-            return NextResponse.json({ error: "Missing or invalid API key" }, { status: 401 });
-        }
+        const authError = authenticateRequest(req);
+        if (authError) return authError;
 
         const body = (await req.json()) as DisbursementRequestBody;
         const { clerkId, tripId, feePercentage } = body;
-        
+
         if (!clerkId || !tripId || feePercentage === undefined) {
             return NextResponse.json({ error: "Missing required parameters" }, { status: 400 });
         }
@@ -135,52 +124,36 @@ export async function POST(req: NextRequest) {
 }
 
 export async function GET(req: NextRequest) {
-  try {
-    // 1. Autenticación Server-to-Server (S2S) vía API Key
-    const authError = authenticateRequest(req);
-    if (authError) 
-      return authError;
+    try {
+        // 1. Autenticación Server-to-Server (S2S) vía API Key
+        const authError = authenticateRequest(req);
+        if (authError)
+            return authError;
 
-    // 2. Extracción y parseo de parámetros HTTP
-    const { searchParams } = new URL(req.url);
-    
-    // Armamos el objeto con la interfaz exacta del servicio
-    const params: GetDisbursementsParams = {
-      page: Number(searchParams.get("page")) || 1,
-      itemsPerPage: Number(searchParams.get("limit")) || 25,
-      search: searchParams.get("search") || undefined,
-      status: searchParams.get("status") || undefined,
-      sort: searchParams.get("sort") || undefined,
-      includeDeleted: true, 
-    };
+        // 2. Extracción y parseo de parámetros HTTP
+        const { searchParams } = new URL(req.url);
 
-    // 3. Llamada a la capa de servicio
-    const result = await getFilteredDisbursements(params);
+        // Armamos el objeto con la interfaz exacta del servicio
+        const params: GetDisbursementsParams = {
+            page: Number(searchParams.get("page")) || 1,
+            itemsPerPage: Number(searchParams.get("limit")) || 25,
+            search: searchParams.get("search") || undefined,
+            status: searchParams.get("status") || undefined,
+            sort: searchParams.get("sort") || undefined,
+            includeDeleted: true,
+        };
 
-    // 4. Devolución de la respuesta
-    return NextResponse.json(result, { status: 200 });
+        // 3. Llamada a la capa de servicio
+        const result = await getFilteredDisbursements(params);
 
-  } catch (error) {
-    console.error("[GET /api/disbursements] Error interno:", error);
-    return NextResponse.json(
-      { error: "Ocurrió un error interno en el servidor al procesar las liquidaciones." }, 
-      { status: 500 }
-    );
-  }
-}
+        // 4. Devolución de la respuesta
+        return NextResponse.json(result, { status: 200 });
 
-function authenticateRequest(req: NextRequest): NextResponse | null {
-    const authHeader = req.headers.get("x-api-key");
-    const expectedSecret = process.env.INTERNAL_API_SECRET;
-
-    if (!expectedSecret) {
-        console.error("INTERNAL_API_SECRET is not configured.");
-        return NextResponse.json({ error: "Internal server error." }, { status: 500 });
+    } catch (error) {
+        console.error("[GET /api/disbursements] Error interno:", error);
+        return NextResponse.json(
+            { error: "Ocurrió un error interno en el servidor al procesar las liquidaciones." },
+            { status: 500 }
+        );
     }
-
-    if (!authHeader || authHeader !== expectedSecret) {
-        return NextResponse.json({ error: "Not authorized" }, { status: 401 });
-    }
-
-    return null;
 }

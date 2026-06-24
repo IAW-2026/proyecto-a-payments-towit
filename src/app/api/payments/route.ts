@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { payments } from "@/db/schema";
 import { getPaymentsUser } from "@/db/queries/users";
-import {getFilteredPayments, GetPaymentsParams} from "@/services/payment.service";
+import { getFilteredPayments, GetPaymentsParams } from "@/services/payment.service";
+import { authenticateRequest } from "@/app/lib/auth";
 
 
 interface PaymentPayload {
@@ -14,14 +15,14 @@ interface PaymentPayload {
 export async function POST(req: NextRequest) {
     try {
         // Authorize
-        const authError = requestAuthorization(req);
+        const authError = authenticateRequest(req);
         if (authError) return authError;
 
         // Parse and Validate Data
         const body = await req.json();
         const validationError = requestDataValidation(body);
         if (validationError) return validationError;
-        
+
         const { tripId, clerkId, amount } = body as PaymentPayload;
 
         const newTransactionId = await executePaymentInsertion(tripId, clerkId, amount);
@@ -56,22 +57,6 @@ export async function POST(req: NextRequest) {
     }
 }
 
-function requestAuthorization(req: NextRequest): NextResponse | null {
-    const authHeader = req.headers.get("authorization");
-    const expectedSecret = process.env.INTERNAL_API_SECRET;
-
-    if (!expectedSecret) {
-        console.error("Falta configurar INTERNAL_API_SECRET en el entorno.");
-        return NextResponse.json({ error: "Internal server error." }, { status: 500 });
-    }
-
-    if (!authHeader || authHeader !== `Bearer ${expectedSecret}`) {
-        return NextResponse.json({ error: "Not authorized" }, { status: 401 });
-    }
-
-    return null;
-}
-
 function requestDataValidation(payload: Partial<PaymentPayload>): NextResponse | null {
     const { tripId, clerkId, amount } = payload;
 
@@ -98,7 +83,7 @@ async function executePaymentInsertion(tripId: string, clerkId: string, amount: 
     if (user.is_banned) {
         throw new Error('BANNED_USER');
     }
-    
+
     try {
         const result = await db.insert(payments).values({
             trip_id: tripId,
@@ -112,7 +97,7 @@ async function executePaymentInsertion(tripId: string, clerkId: string, amount: 
         });
 
         if (result.length === 0) {
-            return null; 
+            return null;
         }
 
         return result[0].transactionId;
@@ -122,58 +107,41 @@ async function executePaymentInsertion(tripId: string, clerkId: string, amount: 
             console.warn(`[DB] Intento de pago duplicado interceptado para el viaje: ${tripId}`);
             return null;
         }
-        
+
         throw error;
     }
 }
 
 export async function GET(req: NextRequest) {
-  try {
-    // 1. Autorización
-    const authError = authenticateRequest(req);
-    if (authError) return authError;
+    try {
+        // 1. Autorización
+        const authError = authenticateRequest(req);
+        if (authError) return authError;
 
-    // 2. Extracción y parseo de parámetros HTTP
-    const { searchParams } = new URL(req.url);
-    
-    // CORRECCIÓN: Adaptamos los nombres a la interfaz GetPaymentsParams
-    const params: GetPaymentsParams = {
-      page: Number(searchParams.get("page")) || 1,
-      itemsPerPage: Number(searchParams.get("limit")) || 25, 
-      search: searchParams.get("search") || undefined,
-      status: searchParams.get("status") || undefined,
-      sort: searchParams.get("sort") || undefined,
-      includeDeleted: true, 
-    };
+        // 2. Extracción y parseo de parámetros HTTP
+        const { searchParams } = new URL(req.url);
 
-    // 3. Llamada a la capa de servicio usando la función unificada
-    const result = await getFilteredPayments(params);
+        // CORRECCIÓN: Adaptamos los nombres a la interfaz GetPaymentsParams
+        const params: GetPaymentsParams = {
+            page: Number(searchParams.get("page")) || 1,
+            itemsPerPage: Number(searchParams.get("limit")) || 25,
+            search: searchParams.get("search") || undefined,
+            status: searchParams.get("status") || undefined,
+            sort: searchParams.get("sort") || undefined,
+            includeDeleted: true,
+        };
 
-    // 4. Devolución de la respuesta
-    return NextResponse.json(result, { status: 200 });
+        // 3. Llamada a la capa de servicio usando la función unificada
+        const result = await getFilteredPayments(params);
 
-  } catch (error) {
-    console.error("[GET /api/payments] Error interno:", error);
-    return NextResponse.json(
-      { error: "Ocurrió un error interno en el servidor al procesar los pagos." }, 
-      { status: 500 }
-    );
-  }
-}
+        // 4. Devolución de la respuesta
+        return NextResponse.json(result, { status: 200 });
 
-// Uses x-api-key for GET endpoint
-function authenticateRequest(req: NextRequest): NextResponse | null {
-    const authHeader = req.headers.get("x-api-key");
-    const expectedSecret = process.env.INTERNAL_API_SECRET;
-
-    if (!expectedSecret) {
-        console.error("INTERNAL_API_SECRET is not configured.");
-        return NextResponse.json({ error: "Internal server error." }, { status: 500 });
+    } catch (error) {
+        console.error("[GET /api/payments] Error interno:", error);
+        return NextResponse.json(
+            { error: "Ocurrió un error interno en el servidor al procesar los pagos." },
+            { status: 500 }
+        );
     }
-
-    if (!authHeader || authHeader !== expectedSecret) {
-        return NextResponse.json({ error: "Not authorized" }, { status: 401 });
-    }
-
-    return null;
 }
