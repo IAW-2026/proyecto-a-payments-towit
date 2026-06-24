@@ -1,7 +1,7 @@
 // src/app/api/disbursements/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
-import { users, payments, disbursements } from "@/db/schema";
+import { users, payments, disbursements, refunds } from "@/db/schema";
 import { eq, and, sql, isNull } from "drizzle-orm";
 import { TransactionStatus } from "@/types/transaction";
 import { getPaymentsUser } from "@/db/queries/users";
@@ -64,8 +64,18 @@ async function executeDisbursementTransaction(
                 return { status: 409, body: { error: "Conflict: The trip has already been disbursed.", code: "ACTIVE_DISBURSEMENT_EXISTS" } };
             }
 
+            const existingRefund = await tx.select()
+                .from(refunds)
+                .where(and(eq(refunds.trip_id, tripId), isNull(refunds.deleted_at)))
+                .limit(1);
+
+            if (existingRefund.length > 0) {
+                console.warn(`[Concurrency] Disbursement attempt blocked for refunded trip: ${tripId}`);
+                return { status: 409, body: { error: "Cannot disburse. Payment has already been refunded.", code: "ACTIVE_REFUND_EXISTS" } };
+            }
+
             if (paymentRecord.status !== "COMPLETED") {
-                return { status: 400, body: { error: `Cannot disburse. Payment status is ${paymentRecord.status}`, code: "SERVER_ACTION_ERROR" } };
+                return { status: 400, body: { error: `Cannot disburse. Payment status is ${paymentRecord.status}`, code: "PAYMENT_NOT_FOUND" } };
             }
 
             const platformFee = Number(paymentRecord.amount) * (feePercentage / 100);

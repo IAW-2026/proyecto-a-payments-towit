@@ -1,6 +1,6 @@
 import { TransactionStatus } from "@/types/transaction";
 import { db } from "@/db";
-import { users, payments, refunds } from "@/db/schema";
+import { users, payments, refunds, disbursements } from "@/db/schema";
 import { and, asc, desc, eq, isNull, ilike, SQL, sql, or } from "drizzle-orm";
 
 import { ActionErrorCode } from "@/types/error";
@@ -177,6 +177,14 @@ export async function processRefundTransaction(
 
             if (existingRefund) {
                 return { status: 409, body: { error: "Refund already processed for this trip.", code: "ACTIVE_REFUND_EXISTS" } };
+            }
+
+            const [existingDisbursement] = await tx.select()
+                .from(disbursements)
+                .where(and(eq(disbursements.trip_id, tripId), isNull(disbursements.deleted_at)));
+
+            if (existingDisbursement) {
+                return { status: 409, body: { error: "Cannot process refund. Payment has already been disbursed.", code: "ACTIVE_DISBURSEMENT_EXISTS" } };
             }
 
             await tx.insert(refunds).values({
