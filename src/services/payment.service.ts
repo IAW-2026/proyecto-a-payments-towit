@@ -1,5 +1,5 @@
 import { db } from "@/db";
-import { payments, disbursements, refunds } from "@/db/schema";
+import { payments, disbursements, refunds, users } from "@/db/schema";
 import { and, desc, asc, eq, isNull, ilike, SQL, or, sql } from "drizzle-orm";
 import { TransactionStatus } from "@/types/transaction";
 
@@ -13,6 +13,18 @@ interface ServiceResponse {
     success: boolean;
     message?: string;
     errorCode?: PaymentErrorCode;
+}
+
+export interface PaymentResponse {
+    transaction_id: string;
+    trip_id: string;
+    clerk_id: string;
+    amount: string;
+    external_id: string | null;
+    status: TransactionStatus;
+    created_at: Date;
+    updated_at: Date;
+    deleted_at: Date | null;
 }
 
 export interface GetPaymentsParams {
@@ -84,8 +96,19 @@ export async function getFilteredPayments(params: GetPaymentsParams) {
 
     // 6. Ejecución concurrente (Data + Count)
     const [data, [{ totalCount }]] = await Promise.all([
-        db.select()
+        db.select({
+            transaction_id: payments.transaction_id,
+            trip_id: payments.trip_id,
+            clerk_id: users.id_clerk,
+            amount: payments.amount,
+            external_id: payments.external_id,
+            status: payments.status,
+            created_at: payments.created_at,
+            updated_at: payments.updated_at,
+            deleted_at: payments.deleted_at,
+        })
             .from(payments)
+            .innerJoin(users, eq(payments.id_user, users.id_user))
             .where(whereClause)
             .orderBy(orderByClause)
             .limit(itemsPerPage)
@@ -93,6 +116,7 @@ export async function getFilteredPayments(params: GetPaymentsParams) {
 
         db.select({ totalCount: sql<number>`count(*)` })
             .from(payments)
+            .innerJoin(users, eq(payments.id_user, users.id_user))
             .where(whereClause)
     ]);
 

@@ -8,6 +8,17 @@ interface TransactionResult {
     body: { message?: string; error?: string; };
 }
 
+export interface RefundResponse {
+    transaction_id: string;
+    trip_id: string;
+    clerk_id: string;
+    amount: string;
+    refund_type: "TOTAL" | "PARTIAL";
+    status: TransactionStatus;
+    created_at: Date;
+    deleted_at: Date | null;
+}
+
 export interface GetRefundsParams {
     userId?: number; 
     search?: string;
@@ -76,8 +87,18 @@ export async function getFilteredRefunds(params: GetRefundsParams) {
 
     // 6. Ejecución concurrente (Data + Count)
     const [data, [{ totalCount }]] = await Promise.all([
-        db.select()
+        db.select({
+            transaction_id: refunds.transaction_id,
+            trip_id: refunds.trip_id,
+            clerk_id: users.id_clerk,
+            amount: refunds.amount,
+            refund_type: refunds.refund_type,
+            status: refunds.status,
+            created_at: refunds.created_at,
+            deleted_at: refunds.deleted_at,
+        })
             .from(refunds)
+            .innerJoin(users, eq(refunds.id_user, users.id_user))
             .where(whereClause)
             .orderBy(orderByCondition)
             .limit(itemsPerPage)
@@ -85,6 +106,7 @@ export async function getFilteredRefunds(params: GetRefundsParams) {
 
         db.select({ totalCount: sql<number>`count(*)` })
             .from(refunds)
+            .innerJoin(users, eq(refunds.id_user, users.id_user))
             .where(whereClause)
     ]);
 

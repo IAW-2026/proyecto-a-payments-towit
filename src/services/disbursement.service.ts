@@ -8,6 +8,17 @@ interface ServiceResponse {
   message?: string;
 }
 
+export interface DisbursementResponse {
+    transaction_id: string;
+    trip_id: string;
+    clerk_id: string;
+    amount: string;
+    platform_fee: string;
+    status: TransactionStatus;
+    created_at: Date;
+    deleted_at: Date | null;
+}
+
 export interface GetDisbursementsParams {
     userId?: number; // Lo hacemos opcional para el panel de administración
     search?: string;
@@ -76,8 +87,18 @@ export async function getFilteredDisbursements(params: GetDisbursementsParams) {
 
     // 6. Ejecución concurrente (Data + Count)
     const [data, [{ totalCount }]] = await Promise.all([
-        db.select()
+        db.select({
+            transaction_id: disbursements.transaction_id,
+            trip_id: disbursements.trip_id,
+            clerk_id: users.id_clerk,
+            amount: disbursements.amount,
+            platform_fee: disbursements.platform_fee,
+            status: disbursements.status,
+            created_at: disbursements.created_at,
+            deleted_at: disbursements.deleted_at,
+        })
             .from(disbursements)
+            .innerJoin(users, eq(disbursements.id_user, users.id_user))
             .where(whereClause)
             .orderBy(orderByCondition)
             .limit(itemsPerPage)
@@ -85,6 +106,7 @@ export async function getFilteredDisbursements(params: GetDisbursementsParams) {
             
         db.select({ totalCount: sql<number>`count(*)` })
             .from(disbursements)
+            .innerJoin(users, eq(disbursements.id_user, users.id_user))
             .where(whereClause)
     ]);
 
