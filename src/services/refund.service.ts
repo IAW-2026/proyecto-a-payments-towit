@@ -1,7 +1,7 @@
 import { TransactionStatus } from "@/types/transaction";
 import { db } from "@/db";
 import { users, payments, refunds } from "@/db/schema";
-import { and, asc, desc, eq, isNull, ilike , SQL, sql, or } from "drizzle-orm";
+import { and, asc, desc, eq, isNull, ilike, SQL, sql, or } from "drizzle-orm";
 
 import { ActionErrorCode } from "@/types/error";
 
@@ -22,26 +22,26 @@ export interface RefundResponse {
 }
 
 export interface GetRefundsParams {
-    userId?: number; 
+    userId?: number;
     search?: string;
     status?: string;
     sort?: string;
     page: number;
     itemsPerPage: number;
-    includeDeleted?: boolean; 
+    includeDeleted?: boolean;
 }
 
 export async function getFilteredRefunds(params: GetRefundsParams) {
-    const { 
-        userId, 
-        search, 
-        status, 
-        sort, 
-        page = 1, 
-        itemsPerPage = 25, 
-        includeDeleted = false 
+    const {
+        userId,
+        search,
+        status,
+        sort,
+        page = 1,
+        itemsPerPage = 25,
+        includeDeleted = false
     } = params;
-    
+
     const offset = (page - 1) * itemsPerPage;
     const conditions: SQL[] = [];
 
@@ -79,7 +79,7 @@ export async function getFilteredRefunds(params: GetRefundsParams) {
     let orderByCondition;
     switch (sort) {
         case "amount_desc": orderByCondition = desc(refunds.amount); break;
-        case "amount_asc":  orderByCondition = asc(refunds.amount); break;
+        case "amount_asc": orderByCondition = asc(refunds.amount); break;
         case "created_asc": orderByCondition = asc(refunds.created_at); break;
         case "created_desc":
         default:
@@ -121,7 +121,7 @@ export async function getFilteredRefunds(params: GetRefundsParams) {
         // Firmas Legacy (Client-side usage)
         refunds: data,
         hasNextPage,
-        
+
         // Firmas Modernas (Control Plane / API usage)
         data,
         meta: {
@@ -192,10 +192,6 @@ export async function processRefundTransaction(
                 .set({ balance: sql`${users.balance} + ${paymentRecord.amount}` })
                 .where(eq(users.id_user, userId));
 
-            await tx.update(payments)
-                .set({ status: "REFUNDED", updated_at: new Date() })
-                .where(eq(payments.transaction_id, paymentRecord.transaction_id));
-
             return { status: 201, body: { message: "Refund processed successfully. Balance credited." } };
         }
 
@@ -235,14 +231,6 @@ export async function cancelRefundSafely(transactionId: string) {
             await tx.update(refunds)
                 .set({ deleted_at: new Date(), status: 'CANCELLED' })
                 .where(eq(refunds.transaction_id, transactionId));
-
-            await tx.update(payments)
-                .set({
-                    status: "COMPLETED", // Volvemos al estado anterior para permitir reintentos o cancelaciones posteriores
-                    updated_at: new Date(),
-                    deleted_at: null
-                })
-                .where(and(eq(payments.trip_id, record.trip_id), isNull(payments.deleted_at)));
 
             return { success: true, message: "Refund cancelled successfully." };
         });

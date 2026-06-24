@@ -161,14 +161,6 @@ export async function cancelDisbursementSafely(transactionId: string): Promise<S
         })
         .where(eq(disbursements.transaction_id, transactionId));
 
-      await tx.update(payments)
-        .set({
-          status: "COMPLETED", // Volvemos al estado anterior para permitir reintentos o cancelaciones posteriores
-          updated_at: new Date(),
-          deleted_at: null
-        })
-        .where(and(eq(payments.trip_id, record.trip_id), isNull(payments.deleted_at)));
-
       return {
         success: true,
         message: record.status === 'COMPLETED'
