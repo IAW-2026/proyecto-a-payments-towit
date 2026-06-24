@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cancelDisbursementSafely } from "@/services/disbursement.service";
-import { authenticateRequest } from "@/lib/auth";
+import { authenticateRequest } from "@/app/lib/auth";
 
 interface RouteContext {
     params: Promise<{
@@ -36,7 +36,7 @@ export async function DELETE(req: NextRequest, context: RouteContext) {
 
         // Inferencia de errores basada en el mensaje del servicio
         const errorMessage = result.message?.toLowerCase() || "";
-        
+
         if (errorMessage.includes("not found")) {
             return NextResponse.json(
                 { error: result.message, code: "DISBURSEMENT_NOT_FOUND" },
@@ -54,7 +54,7 @@ export async function DELETE(req: NextRequest, context: RouteContext) {
         // Fallback genérico para errores de negocio no contemplados
         return NextResponse.json(
             { error: result.message || "Error al procesar la cancelación del desembolso." },
-            { status: 400 } 
+            { status: 400 }
         );
 
     } catch (error) {
