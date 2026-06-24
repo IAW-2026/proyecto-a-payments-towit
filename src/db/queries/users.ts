@@ -5,6 +5,7 @@ import { eq, sql } from "drizzle-orm";
 export type userInformation = {
     userId: number;
     balance: string;
+    is_banned: boolean;
 }
 
 export async function getPaymentsUser(clerkId: string): Promise<userInformation | null> {
@@ -17,5 +18,5 @@ export async function getPaymentsUser(clerkId: string): Promise<userInformation 
         })
         .returning();
 
-    return { userId: dbUser.id_user, balance: dbUser.balance };
+    return { userId: dbUser.id_user, balance: dbUser.balance, is_banned: dbUser.is_banned };
 }

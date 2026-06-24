@@ -35,6 +35,10 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: "User not found." }, { status: 404 });
         }
 
+        if (user.is_banned) {
+            return NextResponse.json({ error: "User is banned from receiving refunds" }, { status: 403 });
+        }
+
         // Business logic and state management 
         const result = await processRefundTransaction(user.userId, tripId, refundType);   
 

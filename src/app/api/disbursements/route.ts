@@ -45,6 +45,10 @@ async function executeDisbursementTransaction(
         return { status: 404, body: { error: "Driver not found in database" } };
     }
 
+    if (driver.is_banned) {
+        return { status: 403, body: { error: "User is banned from receiving disbursements" } };
+    }
+
     try {
         return await db.transaction(async (tx) => {            
             const [paymentRecord] = await tx.select()

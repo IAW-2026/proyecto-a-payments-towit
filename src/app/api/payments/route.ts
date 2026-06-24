@@ -41,7 +41,13 @@ export async function POST(req: NextRequest) {
             { status: 201 }
         );
 
-    } catch (error) {
+    } catch (error: any) {
+        if (error.message === 'BANNED_USER') {
+            return NextResponse.json(
+                { error: "User is banned from making payments" },
+                { status: 403 }
+            );
+        }
         console.error("Critical error in /api/payments:", error);
         return NextResponse.json(
             { error: "Internal server error" },
@@ -87,6 +93,10 @@ async function executePaymentInsertion(tripId: string, clerkId: string, amount: 
     const user = await getPaymentsUser(clerkId);
     if (!user) {
         throw new Error(`El usuario de Clerk ${clerkId} no existe en la base de datos local.`);
+    }
+
+    if (user.is_banned) {
+        throw new Error('BANNED_USER');
     }
     
     try {
