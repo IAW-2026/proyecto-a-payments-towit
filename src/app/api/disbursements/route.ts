@@ -87,16 +87,6 @@ async function executeDisbursementTransaction(
                 })
                 .where(eq(users.id_user, driver.userId));
 
-
-            await tx.update(payments)
-                .set({
-                    status: "DISBURSED", // Actualizamos a nuestro nuevo estado terminal
-                    updated_at: new Date(),
-                    deleted_at: null
-                })
-                .where(and(eq(payments.trip_id, tripId), isNull(payments.deleted_at)));
-
-
             return { status: 201, body: { message: "Disbursement successful" } };
         });
 
