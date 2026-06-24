@@ -44,13 +44,24 @@ async function executeDisbursementTransaction(
 
     try {
         return await db.transaction(async (tx) => {
-            const [paymentRecord] = await tx.select()
+            const paymentRecords = await tx.select()
                 .from(payments)
                 .where(and(eq(payments.trip_id, tripId), isNull(payments.deleted_at)))
                 .for('update');
+            const paymentRecord = paymentRecords[0];
 
             if (!paymentRecord) {
                 return { status: 404, body: { error: "Trip payment not found", code: "PAYMENT_NOT_FOUND" } };
+            }
+
+            const existingDisbursement = await tx.select()
+                .from(disbursements)
+                .where(and(eq(disbursements.trip_id, tripId), isNull(disbursements.deleted_at)))
+                .limit(1);
+
+            if (existingDisbursement.length > 0) {
+                console.warn(`[Concurrency] Double disbursement attempt blocked for trip: ${tripId}`);
+                return { status: 409, body: { error: "Conflict: The trip has already been disbursed.", code: "ACTIVE_DISBURSEMENT_EXISTS" } };
             }
 
             if (paymentRecord.status !== "COMPLETED") {
@@ -92,7 +103,7 @@ async function executeDisbursementTransaction(
     } catch (error: any) {
         if (error.code === '23505' || (error.message && error.message.includes('unique constraint'))) {
             console.warn(`[Concurrency] Double disbursement attempt blocked for trip: ${tripId}`);
-            return { status: 409, body: { error: "Conflict: The trip has already been disbursed.", code: "SERVER_ACTION_ERROR" } };
+            return { status: 409, body: { error: "Conflict: The trip has already been disbursed.", code: "ACTIVE_DISBURSEMENT_EXISTS" } };
         }
 
         console.error(`Critical DB error during disbursement for trip ${tripId}:`, error);

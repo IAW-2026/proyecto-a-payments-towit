@@ -176,7 +176,7 @@ export async function processRefundTransaction(
                 .where(and(eq(refunds.trip_id, tripId), isNull(refunds.deleted_at)));
 
             if (existingRefund) {
-                return { status: 409, body: { error: "Refund already processed for this trip.", code: "SERVER_ACTION_ERROR" } };
+                return { status: 409, body: { error: "Refund already processed for this trip.", code: "ACTIVE_REFUND_EXISTS" } };
             }
 
             await tx.insert(refunds).values({

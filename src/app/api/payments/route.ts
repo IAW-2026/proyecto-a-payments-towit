@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { payments } from "@/db/schema";
 import { getPaymentsUser } from "@/db/queries/users";
+import { and, eq, isNull } from "drizzle-orm";
 import { getFilteredPayments, GetPaymentsParams } from "@/services/payment.service";
 import { authenticateRequest } from "@/app/lib/auth";
 
@@ -51,7 +52,7 @@ export async function POST(req: NextRequest) {
         }
         console.error("Critical error in /api/payments:", error);
         return NextResponse.json(
-            { code: "INTERNAL_SERVER_ERROR" },
+            { error: "Internal server error", code: "SERVER_ERROR" },
             { status: 500 }
         );
     }
@@ -85,6 +86,21 @@ async function executePaymentInsertion(tripId: string, clerkId: string, amount: 
     }
 
     try {
+        const existingPayment = await db.select()
+            .from(payments)
+            .where(
+                and(
+                    eq(payments.trip_id, tripId),
+                    isNull(payments.deleted_at)
+                )
+            )
+            .limit(1);
+            
+        if (existingPayment.length > 0) {
+            console.warn(`[DB] Intento de pago duplicado interceptado para el viaje: ${tripId}`);
+            return null;
+        }
+
         const result = await db.insert(payments).values({
             trip_id: tripId,
             id_user: user.userId,
@@ -103,11 +119,6 @@ async function executePaymentInsertion(tripId: string, clerkId: string, amount: 
         return result[0].transactionId;
 
     } catch (error: any) {
-        if (error.code === '23505') {
-            console.warn(`[DB] Intento de pago duplicado interceptado para el viaje: ${tripId}`);
-            return null;
-        }
-
         throw error;
     }
 }
