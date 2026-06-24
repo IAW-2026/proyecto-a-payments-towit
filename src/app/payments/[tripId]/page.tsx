@@ -139,8 +139,6 @@ export default async function TripPaymentPage({ params }: PageProps) {
                             </div>
                             <a 
                                 href={`${process.env.CUSTOMER_SYSTEM_URL}/customer/request-ride?trip_id=${tripId}`} 
-                                target="_blank" 
-                                rel="noopener noreferrer" 
                                 className="px-6 py-2.5 bg-indigo-600 text-white font-semibold rounded-xl shadow-sm hover:bg-indigo-700 active:scale-95 transition-all text-sm w-full sm:w-auto text-center whitespace-nowrap focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
                             >
                                 Ir a mi viaje
