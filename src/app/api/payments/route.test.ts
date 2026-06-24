@@ -120,7 +120,7 @@ describe('POST /api/payments', () => {
         const req = createMockRequest({ tripId: 'TRP-123', clerkId: 'user_1', amount: 5000 });
         
         // Simulamos que el usuario existe
-        vi.mocked(getPaymentsUser).mockResolvedValue({ userId: 99, balance: '0' });
+        vi.mocked(getPaymentsUser).mockResolvedValue({ userId: 99, balance: '0', is_banned: false });
         
         // Simulamos que Postgres rechazó el INSERT (onConflictDoNothing devuelve array vacío)
         mockReturning.mockResolvedValue([]); 
@@ -139,7 +139,7 @@ describe('POST /api/payments', () => {
         const req = createMockRequest({ tripId: 'TRP-123', clerkId: 'user_1', amount: 5000 });
         const mockTxId = 'uuid-transaccion-exitosa-789';
         
-        vi.mocked(getPaymentsUser).mockResolvedValue({ userId: 99, balance: '0' });
+        vi.mocked(getPaymentsUser).mockResolvedValue({ userId: 99, balance: '0', is_banned: false });
         
         // Simulamos que Postgres insertó correctamente y devolvió el ID
         mockReturning.mockResolvedValue([{ transactionId: mockTxId }]);

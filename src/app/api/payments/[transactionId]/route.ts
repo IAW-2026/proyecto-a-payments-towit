@@ -19,7 +19,7 @@ export async function DELETE(req: NextRequest, context: RouteContext) {
         const { transactionId } = await context.params;
         if (!transactionId) {
             return NextResponse.json(
-                { error: "TransactionId is required in request" },
+                { error: "TransactionId is required in request", code: "VALIDATION_ERROR" },
                 { status: 400 } // Bad Request
             );
         }
@@ -59,7 +59,7 @@ export async function DELETE(req: NextRequest, context: RouteContext) {
             default:
                 // Fallback para códigos no mapeados
                 return NextResponse.json(
-                    { error: result.message || "Unknown error processing the request", code: "UKNOWN_ERROR" },
+                    { error: result.message || "Unknown error processing the request", code: "UNKNOWN_ERROR" },
                     { status: 400 }
                 );
         }
@@ -67,7 +67,7 @@ export async function DELETE(req: NextRequest, context: RouteContext) {
     } catch (error) {
         // 5. Captura de errores críticos no controlados (Ej: caída de DB, errores de sintaxis)
         return NextResponse.json(
-            { error: "Error interno del servidor crítico." },
+            { error: "Error interno del servidor crítico.", code: "SERVER_ERROR" },
             { status: 500 }
         );
     }

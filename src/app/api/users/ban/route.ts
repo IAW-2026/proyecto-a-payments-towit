@@ -20,7 +20,7 @@ export async function POST(req: NextRequest) {
 
         if (!clerkId || typeof clerkId !== "string" || typeof isBanned !== "boolean") {
             return NextResponse.json(
-                { error: "Invalid payload. 'clerkId' (string) and 'isBanned' (boolean) are required." },
+                { error: "Invalid payload. 'clerkId' (string) and 'isBanned' (boolean) are required.", code: "VALIDATION_ERROR" },
                 { status: 400 }
             );
         }
@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
         // Upsert user si no existe en la db local
         const user = await getPaymentsUser(clerkId);
         if (!user) {
-            return NextResponse.json({ error: "Could not fetch or create user" }, { status: 500 });
+            return NextResponse.json({ error: "Could not fetch or create user", code: "NOT_FOUND" }, { status: 500 });
         }
 
         // Actualizamos el estado
@@ -44,7 +44,7 @@ export async function POST(req: NextRequest) {
     } catch (error) {
         console.error("Critical error in /api/users/ban:", error);
         return NextResponse.json(
-            { error: "Internal server error" },
+            { error: "Internal server error", code: "SERVER_ERROR" },
             { status: 500 }
         );
     }

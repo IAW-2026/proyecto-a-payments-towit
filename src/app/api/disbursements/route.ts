@@ -8,6 +8,8 @@ import { getPaymentsUser } from "@/db/queries/users";
 import { getFilteredDisbursements, GetDisbursementsParams } from "@/services/disbursement.service";
 import { authenticateRequest } from "@/app/lib/auth";
 
+import { ActionErrorCode } from "@/types/error";
+
 interface DisbursementRequestBody {
     clerkId: string;
     tripId: string;
@@ -19,6 +21,7 @@ interface TransactionResult {
     body: {
         message?: string;
         error?: string;
+        code?: ActionErrorCode;
     };
 }
 
@@ -32,11 +35,11 @@ async function executeDisbursementTransaction(
 
     const driver = await getPaymentsUser(clerkId);
     if (!driver) {
-        return { status: 404, body: { error: "Driver not found in database" } };
+        return { status: 404, body: { error: "Driver not found in database", code: "NOT_FOUND" } };
     }
 
     if (driver.is_banned) {
-        return { status: 403, body: { error: "User is banned from receiving disbursements" } };
+        return { status: 403, body: { error: "User is banned from receiving disbursements", code: "USER_BANNED" } };
     }
 
     try {
@@ -47,11 +50,11 @@ async function executeDisbursementTransaction(
                 .for('update');
 
             if (!paymentRecord) {
-                return { status: 404, body: { error: "Trip payment not found" } };
+                return { status: 404, body: { error: "Trip payment not found", code: "PAYMENT_NOT_FOUND" } };
             }
 
             if (paymentRecord.status !== "COMPLETED") {
-                return { status: 400, body: { error: `Cannot disburse. Payment status is ${paymentRecord.status}` } };
+                return { status: 400, body: { error: `Cannot disburse. Payment status is ${paymentRecord.status}`, code: "SERVER_ACTION_ERROR" } };
             }
 
             const platformFee = Number(paymentRecord.amount) * (feePercentage / 100);
@@ -89,11 +92,11 @@ async function executeDisbursementTransaction(
     } catch (error: any) {
         if (error.code === '23505' || (error.message && error.message.includes('unique constraint'))) {
             console.warn(`[Concurrency] Double disbursement attempt blocked for trip: ${tripId}`);
-            return { status: 409, body: { error: "Conflict: The trip has already been disbursed." } };
+            return { status: 409, body: { error: "Conflict: The trip has already been disbursed.", code: "SERVER_ACTION_ERROR" } };
         }
 
         console.error(`Critical DB error during disbursement for trip ${tripId}:`, error);
-        return { status: 500, body: { error: "Internal server error during transaction" } };
+        return { status: 500, body: { error: "Internal server error during transaction", code: "DATABASE_ERROR" } };
     }
 }
 
@@ -106,11 +109,11 @@ export async function POST(req: NextRequest) {
         const { clerkId, tripId, feePercentage } = body;
 
         if (!clerkId || !tripId || feePercentage === undefined) {
-            return NextResponse.json({ error: "Missing required parameters" }, { status: 400 });
+            return NextResponse.json({ error: "Missing required parameters", code: "VALIDATION_ERROR" }, { status: 400 });
         }
 
         if (feePercentage < 0 || feePercentage >= 100) {
-            return NextResponse.json({ error: "Fee percentage must be between 0 and 99" }, { status: 400 });
+            return NextResponse.json({ error: "Fee percentage must be between 0 and 99", code: "VALIDATION_ERROR" }, { status: 400 });
         }
 
         const result = await executeDisbursementTransaction(clerkId, tripId, feePercentage);
@@ -119,7 +122,7 @@ export async function POST(req: NextRequest) {
 
     } catch (error: any) {
         console.error("Critical server error in POST /api/disbursements:", error);
-        return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+        return NextResponse.json({ error: "Internal server error", code: "SERVER_ERROR" }, { status: 500 });
     }
 }
 
@@ -152,7 +155,7 @@ export async function GET(req: NextRequest) {
     } catch (error) {
         console.error("[GET /api/disbursements] Error interno:", error);
         return NextResponse.json(
-            { error: "Ocurrió un error interno en el servidor al procesar las liquidaciones." },
+            { error: "Ocurrió un error interno en el servidor al procesar las liquidaciones.", code: "SERVER_ERROR" },
             { status: 500 }
         );
     }

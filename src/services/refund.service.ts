@@ -3,9 +3,11 @@ import { db } from "@/db";
 import { users, payments, refunds } from "@/db/schema";
 import { and, asc, desc, eq, isNull, ilike , SQL, sql, or } from "drizzle-orm";
 
+import { ActionErrorCode } from "@/types/error";
+
 interface TransactionResult {
     status: number;
-    body: { message?: string; error?: string; };
+    body: { message?: string; error?: string; code?: ActionErrorCode; };
 }
 
 export interface RefundResponse {
@@ -143,7 +145,7 @@ export async function processRefundTransaction(
 ): Promise<TransactionResult> {
 
     // Extraemos toda la lógica interna a una función que recibe el ejecutor (tx)
-    const executeLogic = async (tx: any) => {
+    const executeLogic = async (tx: any): Promise<TransactionResult> => {
         let paymentRecord = preFetchedPayment;
 
         if (!paymentRecord) {
@@ -155,7 +157,7 @@ export async function processRefundTransaction(
         }
 
         if (!paymentRecord) {
-            return { status: 404, body: { error: "Payment for this trip not found." } };
+            return { status: 404, body: { error: "Payment for this trip not found.", code: "PAYMENT_NOT_FOUND" } };
         }
 
         const isValidStatus = paymentRecord.status === "COMPLETED" || (isLateWebhook && paymentRecord.status === "CANCELLED");
@@ -174,7 +176,7 @@ export async function processRefundTransaction(
                 .where(and(eq(refunds.trip_id, tripId), isNull(refunds.deleted_at)));
 
             if (existingRefund) {
-                return { status: 409, body: { error: "Refund already processed for this trip." } };
+                return { status: 409, body: { error: "Refund already processed for this trip.", code: "SERVER_ACTION_ERROR" } };
             }
 
             await tx.insert(refunds).values({
@@ -197,7 +199,7 @@ export async function processRefundTransaction(
             return { status: 201, body: { message: "Refund processed successfully. Balance credited." } };
         }
 
-        return { status: 400, body: { error: `Cannot process refund. Current payment status is: ${paymentRecord.status}` } };
+        return { status: 400, body: { error: `Cannot process refund. Current payment status is: ${paymentRecord.status}`, code: "SERVER_ACTION_ERROR" } };
     };
 
     // If we already have a transaction (like in the MercadoPago webhook), we use it. If not (like in the API endpoint), we create a new one.

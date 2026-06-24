@@ -32,11 +32,11 @@ export async function POST(req: NextRequest) {
 
         const user = await getPaymentsUser(clerkId);
         if (!user) {
-            return NextResponse.json({ error: "User not found." }, { status: 404 });
+            return NextResponse.json({ error: "User not found.", code: "NOT_FOUND" }, { status: 404 });
         }
 
         if (user.is_banned) {
-            return NextResponse.json({ error: "User is banned from receiving refunds" }, { status: 403 });
+            return NextResponse.json({ error: "User is banned from receiving refunds", code: "USER_BANNED" }, { status: 403 });
         }
 
         // Business logic and state management 
@@ -46,7 +46,7 @@ export async function POST(req: NextRequest) {
 
     } catch (error) {
         console.error("Critical error in /api/refunds:", error);
-        return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+        return NextResponse.json({ error: "Internal server error", code: "SERVER_ERROR" }, { status: 500 });
     }
 }
 
@@ -78,7 +78,7 @@ export async function GET(req: NextRequest) {
     } catch (error) {
         console.error("[GET /api/refunds] Error interno:", error);
         return NextResponse.json(
-            { error: "Ocurrió un error interno en el servidor al procesar los reembolsos." },
+            { error: "Ocurrió un error interno en el servidor al procesar los reembolsos.", code: "SERVER_ERROR" },
             { status: 500 }
         );
     }
@@ -105,14 +105,14 @@ function validateRefundPayload(payload: Partial<RefundPayload>): NextResponse | 
 
     if (!tripId || typeof tripId !== "string" || !clerkId || typeof clerkId !== "string") {
         return NextResponse.json(
-            { error: "Invalid payload. 'tripId' and 'clerkId' must be provided as strings." },
+            { error: "Invalid payload. 'tripId' and 'clerkId' must be provided as strings.", code: "VALIDATION_ERROR" },
             { status: 400 }
         );
     }
 
     if (!refundType || !["TOTAL", "PARTIAL"].includes(refundType)) {
         return NextResponse.json(
-            { error: "Invalid payload. 'refundType' must be 'TOTAL' or 'PARTIAL'." },
+            { error: "Invalid payload. 'refundType' must be 'TOTAL' or 'PARTIAL'.", code: "VALIDATION_ERROR" },
             { status: 400 }
         );
     }
