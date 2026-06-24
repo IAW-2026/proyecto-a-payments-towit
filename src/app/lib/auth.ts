@@ -52,11 +52,11 @@ export function authenticateRequest(req: NextRequest): NextResponse | null {
 
     if (!expectedSecret) {
         console.error("CRITICAL: INTERNAL_API_SECRET is missing in environment variables.");
-        return NextResponse.json({ error: "Internal server error." }, { status: 500 });
+        return NextResponse.json({ error: "Internal server error.", code: "SERVER_ERROR" }, { status: 500 });
     }
 
     if (!authHeader || authHeader !== expectedSecret) {
-        return NextResponse.json({ error: "Not authorized. Invalid credentials." }, { status: 401 });
+        return NextResponse.json({ error: "Not authorized. Invalid credentials.", code: "NOT_AUTHORIZED" }, { status: 401 });
     }
 
     return null;

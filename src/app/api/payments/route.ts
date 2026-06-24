@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
         if (!newTransactionId) {
             console.warn(`Payment for tripId ${tripId} already exists. ClerkId: ${clerkId}, Amount: ${amount}`);
             return NextResponse.json(
-                { error: "Payment already exists." },
+                { error: "Payment already exists.", code: "ACTIVE_PAYMENT_EXISTS" },
                 { status: 409 }
             );
         }
@@ -45,13 +45,13 @@ export async function POST(req: NextRequest) {
     } catch (error: any) {
         if (error.message === 'BANNED_USER') {
             return NextResponse.json(
-                { error: "User is banned from making payments" },
+                { code: "BANNED_USER" },
                 { status: 403 }
             );
         }
         console.error("Critical error in /api/payments:", error);
         return NextResponse.json(
-            { error: "Internal server error" },
+            { code: "INTERNAL_SERVER_ERROR" },
             { status: 500 }
         );
     }
@@ -62,13 +62,13 @@ function requestDataValidation(payload: Partial<PaymentPayload>): NextResponse |
 
     if (!tripId || typeof tripId !== "string" || !clerkId || typeof clerkId !== "string" || typeof amount !== "number") {
         return NextResponse.json(
-            { error: "Invalid payload. tripId (string), clerkId (string) and amount (number) are required." },
+            { error: "Invalid payload. tripId (string), clerkId (string) and amount (number) are required.", code: "VALIDATION_ERROR" },
             { status: 400 }
         );
     }
 
     if (amount <= 0) {
-        return NextResponse.json({ error: "The amount must be greater than 0" }, { status: 400 });
+        return NextResponse.json({ error: "The amount must be greater than 0", code: "VALIDATION_ERROR" }, { status: 400 });
     }
 
     return null;
@@ -140,7 +140,7 @@ export async function GET(req: NextRequest) {
     } catch (error) {
         console.error("[GET /api/payments] Error interno:", error);
         return NextResponse.json(
-            { error: "Ocurrió un error interno en el servidor al procesar los pagos." },
+            { error: "Ocurrió un error interno en el servidor al procesar los pagos.", code: "SERVER_ERROR" },
             { status: 500 }
         );
     }

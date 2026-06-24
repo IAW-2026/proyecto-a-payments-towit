@@ -18,7 +18,7 @@ export async function DELETE(req: NextRequest, context: RouteContext) {
         const { transactionId } = await context.params;
         if (!transactionId) {
             return NextResponse.json(
-                { error: "TransactionId is required in request URL" },
+                { error: "TransactionId is required in request URL", code: "VALIDATION_ERROR" },
                 { status: 400 } // Bad Request
             );
         }
@@ -53,13 +53,13 @@ export async function DELETE(req: NextRequest, context: RouteContext) {
 
         // Fallback genérico para errores de negocio no contemplados
         return NextResponse.json(
-            { error: result.message || "Error al procesar la cancelación del desembolso." },
+            { error: result.message || "Error al procesar la cancelación del desembolso.", code: "UNKNOWN_ERROR" },
             { status: 400 }
         );
 
     } catch (error) {
         return NextResponse.json(
-            { error: "Error interno del servidor crítico." },
+            { error: "Error interno del servidor crítico.", code: "SERVER_ERROR" },
             { status: 500 }
         );
     }

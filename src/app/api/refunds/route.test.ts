@@ -67,7 +67,7 @@ describe('POST /api/refunds', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         // Estado por defecto: El usuario existe, no hay pagos ni reembolsos previos
-        vi.mocked(getPaymentsUser).mockResolvedValue({ userId: 1, balance: '100.00' });
+        vi.mocked(getPaymentsUser).mockResolvedValue({ userId: 1, balance: '100.00', is_banned: false });
         mockPaymentRecord = [];
         mockExistingRefund = [];
     });
