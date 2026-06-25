@@ -10,7 +10,7 @@ interface BanPayload {
     isBanned: boolean;
 }
 
-export async function POST(req: NextRequest) {
+export async function PATCH(req: NextRequest) {
     try {
         const authError = authenticateRequest(req);
         if (authError) return authError;
